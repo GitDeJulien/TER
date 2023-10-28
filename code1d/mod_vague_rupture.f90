@@ -13,7 +13,7 @@ module mod_vague_rupture
         real(pr)     :: Delta
         real(pr)     :: Hauteur_init
         !les vecteurs d'entrées h0 et u0 (hauteur et débit init)
-        real(pr), dimension(:), allocatable :: hi_0, qi_0
+        real(pr), dimension(:), allocatable :: hi_0, ui_0
         real(pr), dimension(:), allocatable :: x_i
 
     end type
@@ -50,7 +50,7 @@ contains
         dx = L/(vague%n)
 
 
-        allocate(vague%hi_0(0:vague%n+2), vague%qi_0(0:vague%n+2))
+        allocate(vague%hi_0(0:vague%n+2), vague%ui_0(0:vague%n+2))
         allocate(vague%x_i(0:vague%n+2))
 
         select case(vague%choix_cond_init)
@@ -61,7 +61,7 @@ contains
 
                 vague%x_i(i) = (i-vague%n/2)*dx
 
-                vague%qi_0(i) = 0._pr
+                vague%ui_0(i) = 0._pr
                 if (vague%x_i(i)<0) then
                     vague%hi_0(i) = 1._pr
                 else
@@ -70,7 +70,6 @@ contains
 
             end do
 
-            ! vague%hi_0(0) = Vague%Hauteur_init
 
         case(2)
 
@@ -78,7 +77,7 @@ contains
 
             vague%x_i(i) = (i-vague%n/2)*dx
             vague%hi_0(i) = vague%d + (16._pr/6) * (vague%d**3/vague%Delta**2) * 1/COSH(vague%x_i(i)/vague%Delta)**2
-            vague%qi_0(i) = 0._pr
+            vague%ui_0(i) = 0._pr
 
         end do
 
