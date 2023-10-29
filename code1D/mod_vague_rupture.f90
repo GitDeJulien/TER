@@ -4,68 +4,60 @@ module mod_vague_rupture
 
     implicit none
 
-    type vague_type
-        !choix du type de condition initial
-        integer      :: choix_cond_init
-        integer      :: n
-        real(pr)     :: x_max, x_min !abscisse min et max
-        real(pr)     :: d !profondeur eau
-        real(pr)     :: Delta
-        real(pr)     :: Hauteur_init
-        !les vecteurs d'entrées h0 et u0 (hauteur et débit init)
-        real(pr), dimension(:), allocatable :: hi_0, ui_0
-        real(pr), dimension(:), allocatable :: x_i
-
-    end type
 
 contains
 
 
     ! -- Initialisation des paramètres
-
-    subroutine init_vague_rupture(vague, L, dx)
-
-        type(vague_type), intent(out) :: vague
-        real(pr), intent(out)        :: L, dx
-
-        integer :: i
-        open(unit = 1, file = "params_vague_rupture.dat", action = "read")
+    subroutine initialisation(imax, tmax, dx, dt, x_i, h_i, u_i)
 
 
-        read(1,*) vague%n
-        read(1,*) vague%x_min
-        read(1,*) vague%x_max
-        read(1,*) vague%d
-        read(1,*) vague%Delta
-        read(1,*) vague%Hauteur_init
+        ! -- Variable externe
+        integer, intent(inout)                             :: imax
+        real(pr), intent(inout)                            :: dx, dt, tmax
+        real(pr), dimension(:), allocatable, intent(inout) :: h_i, u_i, x_i
 
-        close(1)
+        ! -- Variable interne
+        real(pr)  :: h_init_am, h_init_av, L, x_min, x_max
+        integer   :: i, choix_init
+        real(pr)  :: cfl
 
-        ! -- Demander à l'utilisateur de choisir la cond_init
-        print*, "Entrer  votre choix de condition initiale"
-        print*, "1) Front en crénau"
-        read*, vague%choix_cond_init
+        open(unit = 2, file = "params.dat", action = "read")
 
-        L = abs(vague%x_max-vague%x_min)
-        dx = L/(vague%n)
+        read(2,*) imax
+        read(2,*) x_min
+        read(2,*) x_max
+        read(2,*) h_init_am
+        read(2,*) h_init_av
+        read(2,*) tmax
+        read(2,*) choix_init
+        read(2,*) cfl
 
+        close(2)
 
-        allocate(vague%hi_0(0:vague%n+2), vague%ui_0(0:vague%n+2))
-        allocate(vague%x_i(0:vague%n+2))
+        ! -- Allocation des tableaux
+        allocate(h_i(0:imax+2), u_i(0:imax+2))
+        allocate(x_i(0:imax+2))
 
-        select case(vague%choix_cond_init)
+        L = abs(x_max-x_min)
+        dx = L/(imax)
+
+        ! -- Calcule de dt avec la condition cfl
+        dt = cfl * dx
+
+        select case(choix_init)
 
         case(1)
 
-            do i = 0, vague%n+1
+            do i = 0, imax+2
 
-                vague%x_i(i) = (i-vague%n/2)*dx
+                x_i(i) = (i-imax/2)*dx
+                u_i(i) = 0._pr
 
-                vague%ui_0(i) = 0._pr
-                if (vague%x_i(i)<0) then
-                    vague%hi_0(i) = 1._pr
+                if (x_i(i) < 0) then
+                    h_i(i) = h_init_am
                 else
-                    vague%hi_0(i) = 0._pr
+                    h_i(i) = h_init_av
                 end if
 
             end do
@@ -73,19 +65,11 @@ contains
 
         case(2)
 
-        do i = 1, vague%n+1
-
-            vague%x_i(i) = (i-vague%n/2)*dx
-            vague%hi_0(i) = vague%d + (16._pr/6) * (vague%d**3/vague%Delta**2) * 1/COSH(vague%x_i(i)/vague%Delta)**2
-            vague%ui_0(i) = 0._pr
-
-        end do
-
         end select
 
 
 
-    end subroutine init_vague_rupture
+    end subroutine initialisation
 
 
 

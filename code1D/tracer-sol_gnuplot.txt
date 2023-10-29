@@ -1,12 +1,12 @@
 stat "OUT/premiere_sol.dat" name "A"
 set xr [A_min_x:A_max_x]
-set yr [-8:8]
+set yr [-1:3]
 set term wxt
 set title 'Solution' font "Times-Roman, 17"
 set xlabel 'x' font "Courier, 16"
 set ylabel 'h(t,x)' font "Courier, 16"
 set key font "Helvetica, 17"
 
-set term gif animate delay 10
+set term gif animate delay 20
 set output "sol.gif"
 do for [i=0:int(A_blocks-2)] {plot "OUT/premiere_sol.dat" using 1:2 index i w lines lc 8 lw 2 title "hauteur"}
