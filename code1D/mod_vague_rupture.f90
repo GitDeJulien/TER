@@ -9,18 +9,18 @@ contains
 
 
     ! -- Initialisation des paramètres
-    subroutine initialisation(imax, tmax, dx, dt, x_i, h_i, u_i)
+    subroutine initialisation(imax, tmax, dx, dt, x_i, h_i, u_i, cfl)
 
 
         ! -- Variable externe
         integer, intent(inout)                             :: imax
         real(pr), intent(inout)                            :: dx, dt, tmax
         real(pr), dimension(:), allocatable, intent(inout) :: h_i, u_i, x_i
+        real(pr), intent(inout)                            :: cfl
 
         ! -- Variable interne
         real(pr)  :: h_init_am, h_init_av, L, x_min, x_max
         integer   :: i, choix_init
-        real(pr)  :: cfl
 
         open(unit = 2, file = "params.dat", action = "read")
 
@@ -36,20 +36,21 @@ contains
         close(2)
 
         ! -- Allocation des tableaux
-        allocate(h_i(0:imax+2), u_i(0:imax+2))
-        allocate(x_i(0:imax+2))
+        allocate(h_i(0:imax+1), u_i(0:imax+1))
+        allocate(x_i(0:imax+1))
 
         L = abs(x_max-x_min)
         dx = L/(imax)
 
         ! -- Calcule de dt avec la condition cfl
+
         dt = cfl * dx
 
         select case(choix_init)
 
         case(1)
 
-            do i = 0, imax+2
+            do i = 0, imax+1
 
                 x_i(i) = (i-imax/2)*dx
                 u_i(i) = 0._pr
@@ -66,8 +67,6 @@ contains
         case(2)
 
         end select
-
-
 
     end subroutine initialisation
 

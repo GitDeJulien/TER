@@ -3,6 +3,6 @@
 8        (xmax)
 2        (hauteur_init en amont)
 1        (hauteur_init en avale)
-0.4      (tmax)
+1        (tmax)
 1        (choix condition initial (1 = fonction créneau 3 modes))
-0.25     (cfl)
+0.01     (cfl)
