@@ -9,12 +9,12 @@ contains
 
 
     ! -- Initialisation des paramètres
-    subroutine initialisation(imax, tmax, dx, dt, x_i, h_i, u_i, cfl)
+    subroutine initialisation(imax, tmax, dx, x_i, h_i, u_i, cfl)
 
 
         ! -- Variable externe
         integer, intent(inout)                             :: imax
-        real(pr), intent(inout)                            :: dx, dt, tmax
+        real(pr), intent(inout)                            :: dx, tmax
         real(pr), dimension(:), allocatable, intent(inout) :: h_i, u_i, x_i
         real(pr), intent(inout)                            :: cfl
 
@@ -44,7 +44,7 @@ contains
 
         ! -- Calcule de dt avec la condition cfl
 
-        dt = cfl * dx
+        !dt = cfl * dx
 
         select case(choix_init)
 

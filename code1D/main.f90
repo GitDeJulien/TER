@@ -1,5 +1,6 @@
 program main
 
+    use mod_vague_rupture
     use mod_constantes
     use mod_flux
 
@@ -17,13 +18,13 @@ program main
     Nmax = 10**6
 
     ! initialisation maillage + condition initiale
-    call initialisation(imax, tmax, dx, dt, x_i, h_i, u_i, cfl)
+    call initialisation(imax, tmax, dx, x_i, h_i, u_i, cfl)
 
     ! -- Ouverture du fichier d'écriture des résultats
     open(unit = 10, file = "OUT/premiere_sol.dat", action = "write")
     ! -- Écriture de la condition initiale
     do i = 0, imax+1
-        write(10,*) x_i(i), h_i(i)!, vague%u_i(i)
+        write(10,*) x_i(i), h_i(i)
     end do
     write(10,*)
     write(10,*)
@@ -38,9 +39,10 @@ program main
     flux%unp1 = u_i
 
     print*, "Entrer votre choix d'approximation du flux : "
-    print*, " 1) Moyenne aux bords de mailles"
+    print*, " 1) Approximation de Lax-Friedrichs"
     read*, flux%choix_approx_flux
 
+    dt = 0.01
 
     print*, "-----------------------------------------"
     print*, "dx =", dx
@@ -61,7 +63,7 @@ program main
         u_i = flux%unp1
 
         do i = 0, imax+1
-            write(10,*) x_i(i), h_i(i)!, flux%unp1(i)
+            write(10,*) x_i(i), h_i(i)
         end do
 
         write(10,*)

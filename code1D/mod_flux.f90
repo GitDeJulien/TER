@@ -34,8 +34,9 @@ contains
         real(pr), dimension(size(flux%hnp1)) :: b_i
 
         unsurdx = 1./dx
-
         imax = size(flux%hnp1)-2
+
+        print*, "dt =" , dt
 
         do i = 1, imax+1
 
@@ -45,6 +46,8 @@ contains
             flux%f_q(i) = F(2)
 
         end do
+
+        !!!!! Problème avec la valeur de la cfl !!!!!!
 
         ! -- Calcule du pas de temps respectant la cfl
         if (dt > dx * MAXVAL(b_i(:))/2) then 
