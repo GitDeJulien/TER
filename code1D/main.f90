@@ -42,7 +42,7 @@ program main
     print*, " 1) Approximation de Lax-Friedrichs"
     read*, flux%choix_approx_flux
 
-    dt = 0.01
+    dt = 0.1
 
     print*, "-----------------------------------------"
     print*, "dx =", dx

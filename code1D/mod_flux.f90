@@ -36,7 +36,6 @@ contains
         unsurdx = 1./dx
         imax = size(flux%hnp1)-2
 
-        print*, "dt =" , dt
 
         do i = 1, imax+1
 
@@ -47,15 +46,13 @@ contains
 
         end do
 
-        !!!!! Problème avec la valeur de la cfl !!!!!!
-
         ! -- Calcule du pas de temps respectant la cfl
-        if (dt > dx * MAXVAL(b_i(:))/2) then 
-            dt = cfl * dx*MAXVAL(b_i(:))/2
+        if (dt > dx/(2*MAXVAL(b_i))) then 
+            dt = cfl * dx/(2 * MAXVAL(b_i))
         end if
 
+        ! -- Mise à jour des h et q au nouveau pas de temps
         do i = 1, imax
-
 
             h = flux%hnp1(i) - dt*unsurdx*(flux%f_h(i+1) - flux%f_h(i))
             q = flux%hnp1(i)*flux%unp1(i) - dt*unsurdx*(flux%f_q(i+1) - flux%f_q(i))
@@ -70,6 +67,9 @@ contains
         flux%unp1(0) = flux%unp1(1)
         flux%hnp1(imax+1) = flux%hnp1(imax)
         flux%unp1(imax+1) = flux%unp1(imax)
+
+        ! -- Mise à jour du pas de temps
+        dt = 0.05
 
 
     end subroutine sol_approx_tn
@@ -90,7 +90,7 @@ contains
 
         case(1)
 
-            bi = max(ug + sqrt(g*hg), ud + sqrt(g*hd), ug - sqrt(g*hg), ud - sqrt(g*hd))
+            bi = max(abs(ug + sqrt(g*hg)), abs(ud + sqrt(g*hd)), abs(ug - sqrt(g*hg)), abs(ud - sqrt(g*hd)))
 
 
             F(1) = 0.5*(ud*hd + ug*hg) - 0.5*bi*(hd - hg)
