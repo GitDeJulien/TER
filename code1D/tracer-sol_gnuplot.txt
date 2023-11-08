@@ -7,6 +7,6 @@ set xlabel 'x' font "Courier, 16"
 set ylabel 'h(t,x)' font "Courier, 16"
 set key font "Helvetica, 17"
 
-set term gif animate delay 1
+set term gif animate delay 3
 set output "sol.gif"
 do for [i=0:int(A_blocks-2)] {plot "OUT/premiere_sol.dat" using 1:2 index i w lp lc 8 lw 1 title "approx", "OUT/sol_exact.dat" using 1:2 index i w lp lc 7 lw 1 title "exact"}
