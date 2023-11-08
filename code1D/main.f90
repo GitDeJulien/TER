@@ -67,12 +67,13 @@ program main
     print*, "dx =", dx
     print*, "-----------------------------------------"
 
+    tn = dt
     do while (tn <= tmax .AND. iter < Nmax)
 
         iter = iter + 1
-        tn = tn + dt
 
         call sol_approx_tn(flux, dt, cfl, dx)
+        tn = tn + dt
         call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u)
 
         h_i = flux%hnp1
@@ -91,6 +92,9 @@ program main
 
         write(11,*)
         write(11,*)
+
+        ! -- Mise à jour du pas de temps
+        dt = 0.05
 
     end do
 

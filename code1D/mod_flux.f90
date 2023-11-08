@@ -68,9 +68,6 @@ contains
         flux%hnp1(imax+1) = flux%hnp1(imax)
         flux%unp1(imax+1) = flux%unp1(imax)
 
-        ! -- Mise à jour du pas de temps
-        dt = 0.05
-
 
     end subroutine sol_approx_tn
 
