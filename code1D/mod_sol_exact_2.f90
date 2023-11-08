@@ -20,13 +20,13 @@ contains
         ! -- Variable interne
         integer  :: i, imax
         real(pr) :: sigma, lambda_g, lambda_etoile
-        real(pr) :: h, u
+        real(pr) :: h, u, h_etoile, u_etoile
         real(pr) :: h_init_am, h_init_av
 
         call hauteur(h_init_am, h_init_av)
 
         imax = size(x_i)-2
-        call f_sigma_vp(flux, sigma, lambda_g, lambda_etoile )
+        call f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile)
 
         do i=1, imax+2
 
@@ -41,15 +41,16 @@ contains
                 sol_h(i) = h
                 sol_u(i) = u
 
+
             else if (x_i(i) >= lambda_etoile*tn .AND. x_i(i) < sigma*tn) then
 
-                sol_h(i) = h
-                sol_u(i) = u
+                sol_h(i) = h_etoile
+                sol_u(i) = u_etoile
 
             else
 
                 sol_h(i) = h_init_av
-                sol_u(i) = u
+                sol_u(i) = u_etoile
 
             end if
 
@@ -58,15 +59,16 @@ contains
 
     ! ##################################################################
 
-    subroutine f_sigma_vp(flux, sigma, lambda_g, lambda_etoile)
+    subroutine f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile)
 
         type(flux_type), intent(in)  :: flux
         real(pr), intent(out)        :: sigma
         real(pr), intent(out)        :: lambda_g, lambda_etoile
+        real(pr), intent (out)       :: h_etoile, u_etoile
 
         ! -- Variable local
         !real(pr), dimension(size(flux%hnp1)) :: xn
-        real(pr) :: fn, fb, h_etoile, u_etoile, hnp1, eps
+        real(pr) :: fn, fb, hnp1, eps
         integer  :: imax
         real(pr) :: h_init_am, h_init_av
 
