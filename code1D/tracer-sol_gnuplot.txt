@@ -9,4 +9,4 @@ set key font "Helvetica, 17"
 
 set term gif animate delay 1
 set output "sol.gif"
-do for [i=0:int(A_blocks-2)] {plot "OUT/premiere_sol.dat" using 1:2 index i w lp lc 8 lw 2 title "hauteur"}
+do for [i=0:int(A_blocks-2)] {plot "OUT/premiere_sol.dat" using 1:2 index i w lp lc 8 lw 1 title "approx", "OUT/sol_exact.dat" using 1:2 index i w lp lc 7 lw 1 title "exact"}

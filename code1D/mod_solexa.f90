@@ -5,7 +5,7 @@ module mod_solexa
 
     implicit none
 
- 
+
     
 contains
 !!...........!!
@@ -60,7 +60,7 @@ subroutine sol_exa_tn(hexa_i,uexa_i,t,x_i,imax)          !!sol_approx_tn(flux, d
             hexa_i(i) = (1._pr/(9*g))*(2*A - x_i(i))
             uexa_i(i) = 2*(A - sqrt(hexa_i(i)*g))
         !!...........!!
-        ! xi àgauche de la détente ou à droite de la détente !
+        ! xi à gauche de la détente ou à droite de la détente !
         !!...........!!
         else
             hexa_i(i) = hexa_i(i)

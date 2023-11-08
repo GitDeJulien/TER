@@ -37,12 +37,12 @@ contains
         imax = size(flux%hnp1)-2
 
 
-        do i = 1, imax+1
+        do i = 0, imax
 
-            call flux_num(flux%choix_approx_flux, flux%hnp1(i-1), flux%hnp1(i), flux%unp1(i-1), flux%unp1(i), b_i(i), F)
+            call flux_num(flux%choix_approx_flux, flux%hnp1(i), flux%hnp1(i+1), flux%unp1(i), flux%unp1(i+1), b_i(i+1), F)
 
-            flux%f_h(i) = F(1)
-            flux%f_q(i) = F(2)
+            flux%f_h(i+1) = F(1)
+            flux%f_q(i+1) = F(2)
 
         end do
 
@@ -51,7 +51,7 @@ contains
             dt = cfl * dx/(2 * MAXVAL(b_i))
         end if
 
-        ! -- Mise à jour des h et q au nouveau pas de temps
+        ! -- Mise à jour des h et q au nouveau pas de temps sans les bords
         do i = 1, imax
 
             h = flux%hnp1(i) - dt*unsurdx*(flux%f_h(i+1) - flux%f_h(i))
@@ -94,7 +94,7 @@ contains
 
 
             F(1) = 0.5*(ud*hd + ug*hg) - 0.5*bi*(hd - hg)
-            F(2) = (ug*ug*hg + hg*hg/2. + ud*ud*hd + hd*hd/2.)*0.5 - 0.5*bi*(hd*ud - hg*ug)
+            F(2) = (ug*ug*hg + g*hg*hg/2. + ud*ud*hd + g*hd*hd/2.)*0.5 - 0.5*bi*(hd*ud - hg*ug)
 
 
         end select
