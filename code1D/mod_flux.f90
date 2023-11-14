@@ -29,27 +29,79 @@ contains
         ! - Interne
         integer                :: i, imax
         real(pr)               :: h, q
+        !real(pr)               :: hl, hr, ul, ur
+        real(pr), dimension(2) :: Ugauche, Udroite
         real(pr),dimension(2)  :: F
         real(pr)               :: unsurdx
         real(pr), dimension(size(flux%hnp1)) :: b_i
 
+
         unsurdx = 1./dx
         imax = size(flux%hnp1)-2
 
+        ! -- Tableau des bi
+        do i=0, imax
+            b_i(i+1) = f_bi(flux%hnp1(i), flux%hnp1(i+1), flux%unp1(i), flux%unp1(i+1))
+        end do
+
+
+        ! -- Calcule du pas de temps respectant la cfl
+        if (dt > dx/(2*MAXVAL(b_i))) then 
+            dt = cfl * dx/(2 * MAXVAL(b_i))
+        end if
+
+        select case(flux%choix_approx_flux)
+
+        case(1)
 
         do i = 0, imax
 
-            call flux_num(flux%choix_approx_flux, flux%hnp1(i), flux%hnp1(i+1), flux%unp1(i), flux%unp1(i+1), b_i(i+1), F)
+            Ugauche(1) = flux%hnp1(i)
+            Ugauche(2) = flux%hnp1(i)*flux%unp1(i)
+            Udroite(1) = flux%hnp1(i+1)
+            Udroite(2) = flux%hnp1(i+1)*flux%unp1(i+1)
+
+            F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1), unsurdx, dt)
 
             flux%f_h(i+1) = F(1)
             flux%f_q(i+1) = F(2)
 
         end do
 
-        ! -- Calcule du pas de temps respectant la cfl
-        if (dt > dx/(2*MAXVAL(b_i))) then 
-            dt = cfl * dx/(2 * MAXVAL(b_i))
-        end if
+        case(2)
+
+            do i = 0, imax-1
+
+                Ugauche(1) = 1./2*(flux%hnp1(i+1)-flux%hnp1(i))
+                Ugauche(2) = 1./2*(flux%hnp1(i+1)*flux%unp1(i+1)-flux%hnp1(i)*flux%unp1(i))
+                Udroite(1) = -1./2*(flux%hnp1(i+2)-flux%hnp1(i+1))
+                Udroite(2) = -1./2*(flux%hnp1(i+2)*flux%unp1(i+2)-flux%hnp1(i+1)*flux%unp1(i+1))
+
+                F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1), unsurdx, dt)
+    
+                flux%f_h(i+1) = F(1)
+                flux%f_q(i+1) = F(2)
+    
+            end do
+
+        case(3)
+
+            do i = 0, imax
+
+                Ugauche(1) = flux%hnp1(i)
+                Ugauche(2) = flux%hnp1(i)*flux%unp1(i)
+                Udroite(1) = flux%hnp1(i+1)
+                Udroite(2) = flux%hnp1(i+1)*flux%unp1(i+1)
+    
+                F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1), unsurdx, dt)
+    
+                flux%f_h(i+1) = F(1)
+                flux%f_q(i+1) = F(2)
+    
+            end do
+
+        end select
+
 
         ! -- Mise à jour des h et q au nouveau pas de temps sans les bords
         do i = 1, imax
@@ -62,6 +114,7 @@ contains
 
         end do
 
+
         ! condition de Neumann sur les bords
         flux%hnp1(0) = flux%hnp1(1)
         flux%unp1(0) = flux%unp1(1)
@@ -71,37 +124,83 @@ contains
 
     end subroutine sol_approx_tn
 
+! ###########################################################################################
 
     ! -- Calcul du flux numérique
-    subroutine flux_num(choix_flux, hg, hd, &
-        ug, ud, bi, F)
+    function flux_num(choix_flux, Ug, Ud, bi, unsurdx, dt)result(F)
 
-        real(pr), intent(in)                :: hg, hd
-        real(pr), intent(in)                :: ud, ug
+        real(pr), dimension(2), intent(in)  :: Ug, Ud
         integer, intent(in)                 :: choix_flux
-        real(pr), intent(out)               :: bi
-        real(pr), dimension(2), intent(out) :: F
-        
+        real(pr), intent(in)                :: bi
+        real(pr), intent(in)                :: unsurdx, dt
+        real(pr), dimension(2)              :: F
 
         select case(choix_flux)
 
-        case(1)
+        case(1,2)
 
-            bi = max(abs(ug + sqrt(g*hg)), abs(ud + sqrt(g*hd)), abs(ug - sqrt(g*hg)), abs(ud - sqrt(g*hd)))
+            F(1) = 0.5*(Ud(2) + Ug(2)) - 0.5*bi*(Ud(1) - Ug(1))
+            F(2) = (Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2. + Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2.)*0.5 - 0.5*bi*(Ud(2) - Ug(2))
 
+        case(3)
 
-            F(1) = 0.5*(ud*hd + ug*hg) - 0.5*bi*(hd - hg)
-            F(2) = (ug*ug*hg + g*hg*hg/2. + ud*ud*hd + g*hd*hd/2.)*0.5 - 0.5*bi*(hd*ud - hg*ug)
-
+            F(1) = 0.5*(Ud(2) + Ug(2)) - 0.5*bi*(Ud(2) - Ug(2))
+            F(2) = (Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2. + Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2.)*0.5 - &
+            dt*unsurdx*0.5*bi*(Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2. - Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2.)
 
         end select
 
 
-    end subroutine flux_num
+    end function flux_num
 
+! #############################################################################################
 
+    ! -- Clacul du coefficient bi
+    function f_bi(hg, hd, ug, ud)result(bi)
+        real(pr), intent(in)                :: hg, hd
+        real(pr), intent(in)                :: ud, ug
+        real(pr)                            :: bi
 
-! ------------------------------------------------------
+        bi = max(abs(ug + sqrt(g*hg)), abs(ud + sqrt(g*hd)), abs(ug - sqrt(g*hg)), abs(ud - sqrt(g*hd)))
+
+    end function f_bi
+
+! #############################################################################################
+
+    function Error_fct(approx, exa, dx, norme)result(err)
+
+        ! -- Code pour les erreur 
+        ! - norme = 1 (L1)
+        ! - norme = 2 (L2)
+        ! - norme = 3 (Linfini)
+
+        real(pr), dimension(:), intent(in) :: approx, exa
+        real(pr), intent(in)               :: dx
+        integer, intent(in)                :: norme
+
+        real(pr)                           :: err
+
+        ! -- Locale
+        integer :: i
+
+        err = 0.
+        select case(norme)
+        case(1) ! Norme L1
+            do i=1,size(approx)
+                err = err + dx*abs(exa(i)-approx(i))
+            end do
+
+        case(2)
+            do i=1,size(approx)
+                err = err + dx*abs(exa(i)-approx(i))**2
+            end do
+            err = sqrt(err)
+
+        case(3)
+            err = maxval(abs(exa(:)-approx(:)))
+        end select
+
+    end function
 
 
 
