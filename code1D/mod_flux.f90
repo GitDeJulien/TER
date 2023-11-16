@@ -22,17 +22,17 @@ contains
 
         ! - Externe
         type(flux_type), intent(inout)       :: flux
-        real(pr), intent(in)                 :: dx, cfl 
+        real(pr), intent(in)                 :: dx, cfl
         real(pr), intent(inout)              :: dt
         
 
         ! - Interne
-        integer                :: i, imax
-        real(pr)               :: h, q
-        !real(pr)               :: hl, hr, ul, ur
-        real(pr), dimension(2) :: Ugauche, Udroite
-        real(pr),dimension(2)  :: F
-        real(pr)               :: unsurdx
+        integer                  :: i, imax
+        real(pr)                 :: h, q
+        real(pr), dimension(2)   :: Ugauche, Udroite
+        real(pr),dimension(2)    :: F
+        real(pr)                 :: unsurdx, det_A
+        real(pr), dimension(2,2) :: A
         real(pr), dimension(size(flux%hnp1)) :: b_i
 
 
@@ -61,7 +61,7 @@ contains
             Udroite(1) = flux%hnp1(i+1)
             Udroite(2) = flux%hnp1(i+1)*flux%unp1(i+1)
 
-            F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1), unsurdx, dt)
+            F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1), unsurdx, dt, det_A)
 
             flux%f_h(i+1) = F(1)
             flux%f_q(i+1) = F(2)
@@ -70,30 +70,17 @@ contains
 
         case(2)
 
-            do i = 0, imax-1
-
-                Ugauche(1) = 1./2*(flux%hnp1(i+1)-flux%hnp1(i))
-                Ugauche(2) = 1./2*(flux%hnp1(i+1)*flux%unp1(i+1)-flux%hnp1(i)*flux%unp1(i))
-                Udroite(1) = -1./2*(flux%hnp1(i+2)-flux%hnp1(i+1))
-                Udroite(2) = -1./2*(flux%hnp1(i+2)*flux%unp1(i+2)-flux%hnp1(i+1)*flux%unp1(i+1))
-
-                F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1), unsurdx, dt)
-    
-                flux%f_h(i+1) = F(1)
-                flux%f_q(i+1) = F(2)
-    
-            end do
-
-        case(3)
-
             do i = 0, imax
+
+                call A_roe(flux%hnp1(i-1), flux%hnp1(i), flux%hnp1(i+1), flux%unp1(i-1), flux%unp1(i), &
+                & flux%unp1(i+1), A, det_A, unsurdx)
 
                 Ugauche(1) = flux%hnp1(i)
                 Ugauche(2) = flux%hnp1(i)*flux%unp1(i)
                 Udroite(1) = flux%hnp1(i+1)
                 Udroite(2) = flux%hnp1(i+1)*flux%unp1(i+1)
     
-                F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1), unsurdx, dt)
+                F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1), unsurdx, dt, det_A)
     
                 flux%f_h(i+1) = F(1)
                 flux%f_q(i+1) = F(2)
@@ -127,26 +114,25 @@ contains
 ! ###########################################################################################
 
     ! -- Calcul du flux numérique
-    function flux_num(choix_flux, Ug, Ud, bi, unsurdx, dt)result(F)
+    function flux_num(choix_flux, Ug, Ud, bi, unsurdx, dt, det_A)result(F)
 
         real(pr), dimension(2), intent(in)  :: Ug, Ud
         integer, intent(in)                 :: choix_flux
         real(pr), intent(in)                :: bi
-        real(pr), intent(in)                :: unsurdx, dt
-        real(pr), dimension(2)              :: F
+        real(pr), intent(in)                :: unsurdx, dt, det_A
+        real(pr), dimension(2)              :: F 
 
         select case(choix_flux)
 
-        case(1,2)
+        case(1)
 
             F(1) = 0.5*(Ud(2) + Ug(2)) - 0.5*bi*(Ud(1) - Ug(1))
             F(2) = (Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2. + Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2.)*0.5 - 0.5*bi*(Ud(2) - Ug(2))
 
-        case(3)
+        case(2)
 
-            F(1) = 0.5*(Ud(2) + Ug(2)) - 0.5*bi*(Ud(2) - Ug(2))
-            F(2) = (Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2. + Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2.)*0.5 - &
-            dt*unsurdx*0.5*bi*(Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2. - Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2.)
+            F(1) = 0.5*(Ud(2) + Ug(2)) - 0.5*det_A*(Ud(1) - Ug(1))
+            F(2) = (Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2. + Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2.)*0.5 - 0.5*det_A*(Ud(2) - Ug(2))
 
         end select
 
@@ -164,6 +150,21 @@ contains
         bi = max(abs(ug + sqrt(g*hg)), abs(ud + sqrt(g*hd)), abs(ug - sqrt(g*hg)), abs(ud - sqrt(g*hd)))
 
     end function f_bi
+
+    ! -- Calcul de la matrice de Roe
+    subroutine A_roe(hg, hm, hd, ug, um, ud, A, det_A, unsurdx)
+        real(pr), intent(in)                  :: hg, hm, hd, ug, um, ud, unsurdx
+        real(pr), dimension(:,:), intent(out) :: A 
+        real(pr), intent(out)                 :: det_A
+
+        A(1,1) = 1/2.*(ud-ug)+unsurdx*um
+        A(1,2) = 1/2.*(hd-hg)+unsurdx*hm
+        A(2,1) = unsurdx*g
+        A(2,2) = 1/2.*(ud-ug)+unsurdx*um
+
+        det_A = (1/2.*(ud-ug)+unsurdx*um)**2 - unsurdx*g*1/2.*(hd-hg)+unsurdx*hm
+
+    end subroutine
 
 ! #############################################################################################
 
