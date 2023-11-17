@@ -1,4 +1,4 @@
-stat "OUT/approx_ROE.dat" name "A"
+stat "OUT/approx_ROE_O(1).dat" name "A"
 set xr [A_min_x:A_max_x]
 set yr [0:2.1]
 set term wxt
@@ -7,6 +7,6 @@ set xlabel 'x' font "Courier, 16"
 set ylabel 'h(t,x)' font "Courier, 16"
 set key font "Helvetica, 17"
 
-set term gif animate delay 20
+set term gif animate delay 3
 set output "sol.gif"
-do for [i=0:int(A_blocks-2)] {plot "OUT/sol_exact.dat" using 1:2 index i w l lc 7 lw 1 title "exact", "OUT/approx_ROE.dat" using 1:2 index i w lp lc 8 lw 1 title "approx" }
+do for [i=0:int(A_blocks-2)] {plot "OUT/sol_exact.dat" using 1:2 index i w l lc 7 lw 1 title "exact", "OUT/approx_ROE_O(1).dat" using 1:2 index i w lp lc 8 lw 1 title "approx" }

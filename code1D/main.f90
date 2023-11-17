@@ -35,6 +35,7 @@ program main
     print*, "Entrer votre choix d'approximation du flux : "
     print*, " 1) Approximation de Rusanov d'ordre 1"
     print*, " 2) Approximation de Roe d'ordre 1"
+    print*, " 3) Approximation de Lax-Wendroff d'ordre 2"
     read*, flux%choix_approx_flux
 
     ! -- Ouverture du fichier d'écriture des résultats d'approximation
@@ -42,6 +43,8 @@ program main
         open(unit = 10, file = "OUT/approx_RUSANOV_O(1).dat", action = "write")
     else if (flux%choix_approx_flux == 2) then
         open(unit = 10, file = "OUT/approx_ROE_O(1).dat", action = "write")
+    else if (flux%choix_approx_flux == 3) then
+        open(unit = 10, file = "OUT/approx_LW_O(2).dat", action = "write")
     else
         print*,"Le choix de flux que vous avez fait n'est pas valide, veuillez recommencer"
         stop
@@ -104,7 +107,7 @@ program main
         write(11,*)
 
         ! -- Mise à jour du pas de temps
-        dt = 0.05
+        dt = 0.005
 
     end do
 
