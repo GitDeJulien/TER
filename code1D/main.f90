@@ -2,6 +2,7 @@ program main
 
     use mod_vague_rupture
     use mod_constantes
+    use mod_erreur
     use mod_flux
     use mod_sol_exact_2
 
@@ -107,7 +108,7 @@ program main
         write(11,*)
 
         ! -- Mise à jour du pas de temps
-        dt = 0.005
+        dt = 0.5
 
     end do
 
