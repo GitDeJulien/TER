@@ -14,42 +14,53 @@ program main
     real(pr)                            :: tn, dx, tmax, dt, cfl
     real(pr), dimension(:), allocatable :: x_i, h_i, u_i
     real(pr), dimension(:), allocatable :: sol_exa_h, sol_exa_u
-    real(pr)                            :: error
-
-    integer :: i, iter, Nmax, imax
+    real(pr)                            :: errorL1, errorL2, errorLi
+    real(pr), dimension(3)              :: Vect_err
+    integer :: i, iter, Nmax, imax, cpt
 
     ! -- Sécurité
-    Nmax = 10**6
+    Nmax = 10**7
+    ! -- Initialisation d'un compteur
+    cpt = 0
 
-    ! initialisation maillage + condition initiale
-    call initialisation(imax, tmax, dx, x_i, h_i, u_i, cfl)
+    open(unit = 2, file = "params.dat", action = "read")
+        read(2,*) imax
+    close(2)
+
+    print*, "Entrer votre choix d'approximation du flux : "
+    print*, " 1) Approximation de Rusanov d'ordre 1"
+    print*, " 2) Approximation de Van Leer d'ordre 2"
+    read*, flux%choix_approx_flux
+
+    10 continue
+
+    ! -- Ouverture du fichier d'écriture des résultats d'approximation
+    if (flux%choix_approx_flux == 1) then
+        open(unit = 10, file = "OUT/approx_RUSANOV.dat", action = "write")
+    else if (flux%choix_approx_flux == 2) then
+        open(unit = 10, file = "OUT/approx_Van_Leer.dat", action = "write")
+    else
+        print*,"Le choix de flux que vous avez fait n'est pas valide, veuillez recommencer"
+        stop
+    end if
 
     ! -- Allocation des tableaux de flux de hauteur et de vitesse
+    allocate(x_i(0:imax+1))
+    allocate(h_i(0:imax+1), u_i(0:imax+1))
     allocate(flux%f_h(0:imax+1), flux%f_q(0:imax+1))
     allocate(flux%hnp1(0:imax+1), flux%unp1(0:imax+1))
     allocate(sol_exa_h(0:imax+1), sol_exa_u(0:imax+1))
+
+    ! -- Initialisation maillage
+    call maillage(imax, tmax, dx, cfl, x_i)
+
+    ! initialisation maillage + condition initiale
+    call initialisation(imax, x_i, h_i, u_i)
 
     ! -- Initialisation des flux 
     flux%hnp1 = h_i
     flux%unp1 = u_i
 
-    print*, "Entrer votre choix d'approximation du flux : "
-    print*, " 1) Approximation de Rusanov d'ordre 1"
-    print*, " 2) Approximation de Roe d'ordre 1"
-    print*, " 3) Approximation de Lax-Wendroff d'ordre 2"
-    read*, flux%choix_approx_flux
-
-    ! -- Ouverture du fichier d'écriture des résultats d'approximation
-    if (flux%choix_approx_flux == 1) then
-        open(unit = 10, file = "OUT/approx_RUSANOV_O(1).dat", action = "write")
-    else if (flux%choix_approx_flux == 2) then
-        open(unit = 10, file = "OUT/approx_ROE_O(1).dat", action = "write")
-    else if (flux%choix_approx_flux == 3) then
-        open(unit = 10, file = "OUT/approx_LW_O(2).dat", action = "write")
-    else
-        print*,"Le choix de flux que vous avez fait n'est pas valide, veuillez recommencer"
-        stop
-    end if
     
     ! -- Écriture de la condition initiale
     do i = 0, imax+1
@@ -58,40 +69,37 @@ program main
     write(10,*)
     write(10,*)
 
-    dt = 0.1
+    dt = 0.01
     tn = 0.
     iter = 0
     sol_exa_h = 0.
     sol_exa_u = 0.
 
     ! -- Calcule de la solution exacte au temps t = 0
-    call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u)
+    !call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u)
 
     ! -- Ouverture du fichier d'écriture des résultats
     open(unit = 11, file = "OUT/sol_exact.dat", action = "write")
 
-
-    do i = 0, imax+1
-        write(11,*) x_i(i), h_i(i)
-    end do
-    write(11,*)
-    write(11,*)
-
+    print*, "Passage n°", cpt+1
     print*, "-----------------------------------------"
     print*, "dx =", dx
-    print*, "-----------------------------------------"
 
-    tn = dt
+    ! -- Boucle en temps
     do while (tn <= tmax .AND. iter < Nmax)
 
         iter = iter + 1
+        ! -- Solution exacte
+        call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u)
 
-        call sol_approx_tn(flux, dt, cfl, dx)
+        ! -- Solution approchée
+        call sol_approx_tn(flux, dt, cfl, dx, tn)
+
+        ! -- Mise à jour des flux
         h_i = flux%hnp1
         u_i = flux%unp1
 
-        tn = tn + dt
-        call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u)
+        ! -- Écriture dans les fichiers un fichier .dat
 
         do i = 0, imax+1
             write(10,*) x_i(i), h_i(i)
@@ -107,21 +115,17 @@ program main
         write(11,*)
         write(11,*)
 
-        ! -- Mise à jour du pas de temps
-        dt = 0.5
-
     end do
 
     ! -- Calcule de l'erreur
-    print*, "----------------------------------"
-    error = Error_fct(h_i, sol_exa_h, dx, 1)
-    print*, "Error L1 = ", error
-    error = Error_fct(h_i, sol_exa_h, dx, 2)
-    print*, "Error L2 = ", error
-    error = Error_fct(h_i, sol_exa_h, dx, 3)
-    print*, "Error L_inifnit = ", error
-    print*, "----------------------------------"
-
+    print*, "-------------------------------------------"
+    errorL1 = Error_fct(h_i, sol_exa_h, 1, dx)
+    errorL2 = Error_fct(h_i, sol_exa_h, 2, dx)
+    errorLi = Error_fct(h_i, sol_exa_h, 3, dx)
+    print*, "-------------------------------------------"
+    ! -- Incrément du compteur
+    cpt = cpt + 1
+    Vect_err(cpt) = errorL1
 
     deallocate(x_i, h_i, u_i)
     deallocate(flux%f_h, flux%f_q, flux%hnp1, flux%unp1)
@@ -129,6 +133,16 @@ program main
 
     close(10)
     close(11)
+
+    ! ######################## ORDRE #################### !
+    if (flux%choix_approx_flux == 1 .AND. cpt <2) then
+        imax = imax *2
+        goto 10
+    end if
+
+    print*, "#############################################"
+    print*, "Schéma d'ordre = ", log(Vect_err(1)/Vect_err(2))/log(2.)
+    print*, "#############################################"
 
 
 end program

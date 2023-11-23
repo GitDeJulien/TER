@@ -12,18 +12,17 @@ module mod_flux
         real(pr), dimension(:), allocatable :: hnp1, unp1
         real(pr), dimension(:), allocatable :: f_h, f_q
 
-        integer      :: n
     end type
 
 contains
 
 
-    subroutine sol_approx_tn(flux, dt, cfl, dx)
+    subroutine sol_approx_tn(flux, dt, cfl, dx, tn)
 
         ! - Externe
         type(flux_type), intent(inout)       :: flux
         real(pr), intent(in)                 :: dx, cfl
-        real(pr), intent(inout)              :: dt
+        real(pr), intent(inout)              :: dt, tn
         
 
         ! - Interne
@@ -67,9 +66,7 @@ contains
 
         end do
 
-
         end select
-
 
         ! -- Mise à jour des h et q au nouveau pas de temps sans les bords
         do i = 1, imax
@@ -82,13 +79,13 @@ contains
 
         end do
 
-
         ! condition de Neumann sur les bords
         flux%hnp1(0) = flux%hnp1(1) 
         flux%unp1(0) = flux%unp1(1)
         flux%hnp1(imax+1) = flux%hnp1(imax)
         flux%unp1(imax+1) = flux%unp1(imax)
 
+        tn = tn + dt
 
 
     end subroutine sol_approx_tn

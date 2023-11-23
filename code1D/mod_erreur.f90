@@ -9,7 +9,7 @@ module mod_erreur
 contains
 
 
-    function Error_fct(approx, exa, dx, norme)result(err)
+    function Error_fct(approx, exa, norme, dx)result(err)
 
         ! -- Code pour les erreur 
         ! - norme = 1 (L1)
@@ -17,32 +17,30 @@ contains
         ! - norme = 3 (Linfini)
 
         real(pr), dimension(:), intent(in) :: approx, exa
-        real(pr), intent(in)               :: dx
         integer, intent(in)                :: norme
-
+        real(pr), intent(in)               :: dx
         real(pr)                           :: err
-
-        ! -- Locale
-        integer :: i
 
         err = 0.
         select case(norme)
         case(1) ! Norme L1
-            do i=1,size(approx)
-                err = err + dx*abs(exa(i)-approx(i))
-            end do
 
-        case(2)
-            do i=1,size(approx)
-                err = err + dx*abs(exa(i)-approx(i))**2
-            end do
-            err = sqrt(err)
+            err = sum(dx*abs(exa(:)-approx(:)))
+            print*, "Erreur L1 = ", err
 
-        case(3)
+        case(2) ! Norme L2
+
+            err = sqrt(sum(dx*abs(exa(:)-approx(:))))
+            print*, "Error L2 = ", err
+
+        case(3) ! Norme L_infty
             err = maxval(abs(exa(:)-approx(:)))
+            print*, "Error L_inifnit = ", err
         end select
 
     end function
+
+
 
 
 end module
