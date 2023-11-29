@@ -15,7 +15,8 @@ program main
     real(pr), dimension(:), allocatable :: x_i, h_i, u_i
     real(pr), dimension(:), allocatable :: sol_exa_h, sol_exa_u
     real(pr)                            :: errorL1, errorL2, errorLi
-    real(pr), dimension(3)              :: Vect_err
+    real(pr), dimension(6)             :: Vect_err 
+    integer, dimension(6)              :: Vect_imax
     integer :: i, iter, Nmax, imax, cpt
 
     ! -- Sécurité
@@ -61,7 +62,6 @@ program main
     flux%hnp1 = h_i
     flux%unp1 = u_i
 
-    
     ! -- Écriture de la condition initiale
     do i = 0, imax+1
         write(10,*) x_i(i), h_i(i)
@@ -75,15 +75,13 @@ program main
     sol_exa_h = 0.
     sol_exa_u = 0.
 
-    ! -- Calcule de la solution exacte au temps t = 0
-    !call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u)
-
     ! -- Ouverture du fichier d'écriture des résultats
     open(unit = 11, file = "OUT/sol_exact.dat", action = "write")
 
     print*, "Passage n°", cpt+1
     print*, "-----------------------------------------"
     print*, "dx =", dx
+    print*, "tmax =", tmax
 
     ! -- Boucle en temps
     do while (tn <= tmax .AND. iter < Nmax)
@@ -123,23 +121,26 @@ program main
     errorL2 = Error_fct(h_i, sol_exa_h, 2, dx)
     errorLi = Error_fct(h_i, sol_exa_h, 3, dx)
     print*, "-------------------------------------------"
+
     ! -- Incrément du compteur
     cpt = cpt + 1
     Vect_err(cpt) = errorL1
-
+    Vect_imax(cpt) = imax
+    ! Désalocation des tableaux
     deallocate(x_i, h_i, u_i)
     deallocate(flux%f_h, flux%f_q, flux%hnp1, flux%unp1)
     deallocate(sol_exa_h, sol_exa_u)
-
+    ! Fermeture des fichiers
     close(10)
     close(11)
 
     ! ######################## ORDRE #################### !
-    if (flux%choix_approx_flux == 1 .AND. cpt <2) then
+    if (flux%choix_approx_flux == 1 .AND. cpt < 2) then
         imax = imax *2
         goto 10
     end if
 
+    !call OUT(Vect_imax, Vect_err)
     print*, "#############################################"
     print*, "Schéma d'ordre = ", log(Vect_err(1)/Vect_err(2))/log(2.)
     print*, "#############################################"

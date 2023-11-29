@@ -25,12 +25,12 @@ contains
         select case(norme)
         case(1) ! Norme L1
 
-            err = sum(dx*abs(exa(:)-approx(:)))
+            err = dx*sum(abs(exa(:)-approx(:)))
             print*, "Erreur L1 = ", err
 
         case(2) ! Norme L2
 
-            err = sqrt(sum(dx*abs(exa(:)-approx(:))))
+            err = sqrt(dx*sum((exa-approx)**2))
             print*, "Error L2 = ", err
 
         case(3) ! Norme L_infty
@@ -40,6 +40,26 @@ contains
 
     end function
 
+
+    subroutine OUT(vect_imax, vect_error)
+
+        integer, dimension(:), intent(in)  :: vect_imax
+        real(pr), dimension(:), intent(in) :: vect_error
+
+        ! Local variable
+        integer :: i
+
+        open(unit = 1, file = 'OUT/error.dat', action = "write")
+
+        do i = 1, size(vect_imax)
+
+            write(1,*) 1./vect_imax(i), vect_error(i)
+        end do
+
+        close(1)
+
+    end subroutine
+        
 
 
 

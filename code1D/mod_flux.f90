@@ -9,7 +9,7 @@ module mod_flux
         !choix du type d'approximation de flux
         integer      :: choix_approx_flux
         !les vecteurs d'entrées h et u (hauteur et vitesse init)
-        real(pr), dimension(:), allocatable :: hnp1, unp1
+        real(pr), dimension(:), allocatable :: hnp1, unp1 ! //Mieux vaux appeler un veteur Un avec hn et un
         real(pr), dimension(:), allocatable :: f_h, f_q
 
     end type
@@ -26,12 +26,11 @@ contains
         
 
         ! - Interne
-        integer                  :: i, imax
-        real(pr)                 :: h, q
-        real(pr), dimension(2)   :: Ugauche, Udroite
-        real(pr),dimension(2)    :: F
-        real(pr)                 :: unsurdx
-        real(pr), dimension(size(flux%hnp1)) :: b_i
+        integer                                     :: i, imax
+        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ug, Ud, F  ! - Taille imax+1
+        real(pr), dimension(1:size(flux%hnp1)-2, 2) :: Un, Unp1   ! - Taille imax
+        real(pr)                                    :: unsurdx
+        real(pr), dimension(1:size(flux%hnp1)-1)    :: b_i
 
 
         unsurdx = 1./dx
@@ -52,35 +51,39 @@ contains
 
         case(1)
 
-        do i = 0, imax
+            Ug(1:imax+1,1) = flux%hnp1(0:imax)
+            Ug(1:imax+1,2) = flux%hnp1(0:imax)*flux%unp1(0:imax)
+            Ud(1:imax+1,1) = flux%hnp1(1:imax+1)
+            Ud(1:imax+1,2) = flux%hnp1(1:imax+1)*flux%unp1(1:imax+1)
 
-            Ugauche(1) = flux%hnp1(i)
-            Ugauche(2) = flux%hnp1(i)*flux%unp1(i)
-            Udroite(1) = flux%hnp1(i+1)
-            Udroite(2) = flux%hnp1(i+1)*flux%unp1(i+1)
+            F = flux_num_2(imax, Ug, Ud, b_i)
 
-            F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, b_i(i+1))
+            Unp1(1:imax,1) = flux%hnp1(1:imax) - dt*unsurdx*(F(2:imax+1,1) - F(1:imax,1))
+            Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
 
-            flux%f_h(i+1) = F(1)
-            flux%f_q(i+1) = F(2)
+        case(2) ! - Ordre 2 stencile (Ui-1, Ui, Ui+1)
+            
 
-        end do
+            Ug(1:imax,1) = 1./3*(flux%hnp1(0:imax-1) + flux%hnp1(1:imax) + flux%hnp1(2:imax+1))
+            Ug(1:imax,2) = 1./2*(flux%hnp1(0:imax-1)*flux%unp1(0:imax-1) + flux%hnp1(1:imax)*flux%unp1(1:imax) + &
+            flux%hnp1(2:imax+1)*flux%unp1(2:imax+1))
+            Ud(1:imax,1) = 5./6*flux%hnp1(2:imax+1) + 1./3*flux%hnp1(1:imax) - 1./6*flux%hnp1(0:imax-1)
+            Ud(1:imax,2) = 5./6*flux%hnp1(2:imax+1)*flux%unp1(2:imax+1) + 1./3*flux%hnp1(1:imax)*flux%unp1(1:imax) - &
+            1./6*flux%hnp1(0:imax-1)*flux%unp1(0:imax-1)
+
+            Un(1:imax,1) = flux%hnp1(1:imax)
+            Un(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax)
+
+            Unp1 = RK2_SSP(flux, Un, Ug, Ud, dt, unsurdx, b_i, imax)
 
         end select
 
-        ! -- Mise à jour des h et q au nouveau pas de temps sans les bords
-        do i = 1, imax
 
-            h = flux%hnp1(i) - dt*unsurdx*(flux%f_h(i+1) - flux%f_h(i))
-            q = flux%hnp1(i)*flux%unp1(i) - dt*unsurdx*(flux%f_q(i+1) - flux%f_q(i))
+        flux%hnp1(1:imax) = Unp1(1:imax,1)
+        flux%unp1(1:imax) = Unp1(1:imax,2)/Unp1(1:imax,1)
 
-            flux%hnp1(i) = h
-            flux%unp1(i) = q/h
-
-        end do
-
-        ! condition de Neumann sur les bords
-        flux%hnp1(0) = flux%hnp1(1) 
+        ! -- Conditions de Neumann au bord
+        flux%hnp1(0) = flux%hnp1(1)
         flux%unp1(0) = flux%unp1(1)
         flux%hnp1(imax+1) = flux%hnp1(imax)
         flux%unp1(imax+1) = flux%unp1(imax)
@@ -92,25 +95,26 @@ contains
 
 ! ###########################################################################################
 
-    ! -- Calcul du flux numérique
-    function flux_num(choix_flux, Ug, Ud, bi)result(F)
+    function flux_num_2(imax, Ug, Ud, bi)result(F)
 
-        real(pr), dimension(2), intent(in)  :: Ug, Ud
-        integer, intent(in)                 :: choix_flux
-        real(pr), intent(in)                :: bi
-        real(pr), dimension(2)              :: F 
+        integer, intent(in)                          :: imax
+        real(pr), dimension(1:imax+1, 2), intent(in) :: Ug, Ud
+        real(pr), dimension(imax+1), intent(in)      :: bi
 
-        select case(choix_flux)
+        real(pr), dimension(1:imax+1, 2)             :: F
 
-        case(1)
+        ! -- Local
+        integer :: i
 
-            F(1) = 0.5*(Ud(2) + Ug(2)) - 0.5*bi*(Ud(1) - Ug(1))
-            F(2) = (Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2. + Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2.)*0.5 - 0.5*bi*(Ud(2) - Ug(2))
+        do i=1, imax+1
 
-        end select
+            F(i,1) = 0.5*(Ud(i,2) + Ug(i,2)) - 0.5*bi(i)*(Ud(i,1) - Ug(i,1))
+            F(i,2) = (Ug(i,2)*Ug(i,2)/Ug(i,1) + g*Ug(i,1)*Ug(i,1)/2. + Ud(i,2)*Ud(i,2)/Ud(i,1)&
+            + g*Ud(i,1)*Ud(i,1)/2.)*0.5 - 0.5*bi(i)*(Ud(i,2) - Ug(i,2))
 
+        end do
 
-    end function flux_num
+    end function
 
 ! #############################################################################################
 
@@ -127,6 +131,32 @@ contains
 
 ! #############################################################################################
 
+    ! -- RK2 - Heun - SSP
+    function RK2_SSP(flux, Un, Ug, Ud, dt, unsurdx, bi, imax)result(Unp1)
+
+        type(flux_type), intent(in)          :: flux
+        real(pr), intent(in)                 :: dt, unsurdx
+        real(pr), dimension(:,:), intent(in) :: Ug, Ud
+        real(pr), dimension(:,:), intent(in) :: Un
+        real(pr), dimension(:), intent(in)   :: bi
+        integer, intent(in)                  :: imax
+
+        real(pr), dimension(1:imax, 2)   :: Unp1
+
+        ! -- Local
+        real(pr), dimension(1:imax, 2)   :: k1, k2
+        real(pr), dimension(1:imax+1, 2) :: F
+        
+        F = flux_num_2(imax, Ug, Ud, bi)
+        k1(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
+        F = flux_num_2(imax, Un+dt*k1, Un+dt*k1, bi)
+        k2(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
+
+        Unp1(1:imax,1) = flux%hnp1(1:imax) + dt*(1./2*k1(1:imax, 1) + 1./2*k2(1:imax, 1))
+        Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) + dt*(1./2*k1(1:imax, 2) + 1./2*k2(1:imax, 2)) 
+
+
+    end function
 
 
 
