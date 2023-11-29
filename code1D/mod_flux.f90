@@ -28,7 +28,8 @@ contains
         ! - Interne
         integer                                     :: i, imax
         real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ug, Ud, F  ! - Taille imax+1
-        real(pr), dimension(1:size(flux%hnp1)-2, 2) :: Un, Unp1   ! - Taille imax
+        real(pr), dimension(1:size(flux%hnp1)-2, 2) :: Unp1       ! - Taille imax
+        real(pr), dimension(0:size(flux%hnp1)-1, 2) :: Un         ! - Taille imax+2 (0:imax+1)
         real(pr)                                    :: unsurdx
         real(pr), dimension(1:size(flux%hnp1)-1)    :: b_i
 
@@ -47,14 +48,15 @@ contains
             dt = cfl * dx/(2 * MAXVAL(b_i))
         end if
 
+        Un(0:imax+1,1) = flux%hnp1(0:imax+1)
+        Un(0:imax+1,2) = flux%hnp1(0:imax+1)*flux%unp1(0:imax+1)
+
         select case(flux%choix_approx_flux)
 
         case(1)
 
-            Ug(1:imax+1,1) = flux%hnp1(0:imax)
-            Ug(1:imax+1,2) = flux%hnp1(0:imax)*flux%unp1(0:imax)
-            Ud(1:imax+1,1) = flux%hnp1(1:imax+1)
-            Ud(1:imax+1,2) = flux%hnp1(1:imax+1)*flux%unp1(1:imax+1)
+            Ug(1:imax+1,:) = Un(0:imax,:)
+            Ud(1:imax+1,:) = Un(1:imax+1,:)
 
             F = flux_num_2(imax, Ug, Ud, b_i)
 
@@ -62,19 +64,8 @@ contains
             Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
 
         case(2) ! - Ordre 2 stencile (Ui-1, Ui, Ui+1)
-            
 
-            Ug(1:imax,1) = 1./3*(flux%hnp1(0:imax-1) + flux%hnp1(1:imax) + flux%hnp1(2:imax+1))
-            Ug(1:imax,2) = 1./2*(flux%hnp1(0:imax-1)*flux%unp1(0:imax-1) + flux%hnp1(1:imax)*flux%unp1(1:imax) + &
-            flux%hnp1(2:imax+1)*flux%unp1(2:imax+1))
-            Ud(1:imax,1) = 5./6*flux%hnp1(2:imax+1) + 1./3*flux%hnp1(1:imax) - 1./6*flux%hnp1(0:imax-1)
-            Ud(1:imax,2) = 5./6*flux%hnp1(2:imax+1)*flux%unp1(2:imax+1) + 1./3*flux%hnp1(1:imax)*flux%unp1(1:imax) - &
-            1./6*flux%hnp1(0:imax-1)*flux%unp1(0:imax-1)
-
-            Un(1:imax,1) = flux%hnp1(1:imax)
-            Un(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax)
-
-            Unp1 = RK2_SSP(flux, Un, Ug, Ud, dt, unsurdx, b_i, imax)
+            Unp1 = RK2_SSP(Un, Ug, Ud, dt, unsurdx, b_i, imax)
 
         end select
 
@@ -132,11 +123,10 @@ contains
 ! #############################################################################################
 
     ! -- RK2 - Heun - SSP
-    function RK2_SSP(flux, Un, Ug, Ud, dt, unsurdx, bi, imax)result(Unp1)
+    function RK2_SSP(Un, Ug, Ud, dt, unsurdx, bi, imax)result(Unp1)
 
-        type(flux_type), intent(in)          :: flux
         real(pr), intent(in)                 :: dt, unsurdx
-        real(pr), dimension(:,:), intent(in) :: Ug, Ud
+        real(pr), dimension(:,:), intent(inout) :: Ug, Ud
         real(pr), dimension(:,:), intent(in) :: Un
         real(pr), dimension(:), intent(in)   :: bi
         integer, intent(in)                  :: imax
@@ -144,20 +134,37 @@ contains
         real(pr), dimension(1:imax, 2)   :: Unp1
 
         ! -- Local
-        real(pr), dimension(1:imax, 2)   :: k1, k2
+        real(pr), dimension(0:imax+1, 2)   :: k1, k2
         real(pr), dimension(1:imax+1, 2) :: F
-        
+
+        call discretisation_second_order(imax, Un, Ug, Ud)
         F = flux_num_2(imax, Ug, Ud, bi)
         k1(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
-        F = flux_num_2(imax, Un+dt*k1, Un+dt*k1, bi)
+        k1(0, :) = 0.
+        k1(imax+1, :) = 0.
+
+        call discretisation_second_order(imax, Un+dt*k1, Ug, Ud)
+        F = flux_num_2(imax, Ug, Ud, bi)
         k2(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
-        Unp1(1:imax,1) = flux%hnp1(1:imax) + dt*(1./2*k1(1:imax, 1) + 1./2*k2(1:imax, 1))
-        Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) + dt*(1./2*k1(1:imax, 2) + 1./2*k2(1:imax, 2)) 
+        Unp1(1:imax, :) = Un(1:imax, :) + dt*(1./2*k1(1:imax, :) + 1./2*k2(1:imax, :))
 
 
     end function
 
+    subroutine discretisation_second_order(imax, Un, Ug, Ud)
+        
+        integer, intent(in)                   :: imax
+        real(pr), dimension(0:imax+1,2), intent(in)  :: Un
+        real(pr), dimension(1:imax+1,2), intent(out) :: Ug, Ud
+
+        Ug(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
+        Ud(1:imax,:) = 5./6*Un(2:imax+1,:) + 1./3*Un(1:imax,:) - 1./6*Un(0:imax-1,:)
+
+        Ug(imax+1,:) = 3./2*Un(imax-2,:) - 1./2*Un(imax-1,:)
+        Ud(imax+1,:) = 1./2*(Un(imax-1,:) + Un(imax,:))
+
+    end subroutine
 
 
 
