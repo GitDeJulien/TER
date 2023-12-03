@@ -112,6 +112,9 @@ program main
     print*, "Passage n°", cpt+1
     print*, "-----------------------------------------"
     print*, "dx =", dx
+    print*, "tmax =", tmax
+
+    ! -- Boucle en temps
     print*, "-----------------------------------------"
     print*,"Calcul de la solution..."
     ! -- Boucle en temps

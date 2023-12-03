@@ -165,7 +165,6 @@ contains
         Ud(imax+1,:) = 1./2*(Un(imax-1,:) + Un(imax,:))
 
     end subroutine
-! #############################################################################################
 
     subroutine evolution_capteur(name_file,imax,iter,dt,nb_capteurs,Pos_capteurs)
         
