@@ -9,31 +9,29 @@ module mod_flux
         !choix du type d'approximation de flux
         integer      :: choix_approx_flux
         !les vecteurs d'entrées h et u (hauteur et vitesse init)
-        real(pr), dimension(:), allocatable :: hnp1, unp1
+        real(pr), dimension(:), allocatable :: hnp1, unp1 ! //Mieux vaux appeler un veteur Un avec hn et un
         real(pr), dimension(:), allocatable :: f_h, f_q
 
-        integer      :: n
     end type
 
 contains
 
 
-    subroutine sol_approx_tn(flux, dt, cfl, dx)
+    subroutine sol_approx_tn(flux, dt, cfl, dx, tn)
 
         ! - Externe
         type(flux_type), intent(inout)       :: flux
         real(pr), intent(in)                 :: dx, cfl
-        real(pr), intent(inout)              :: dt
+        real(pr), intent(inout)              :: dt, tn
         
 
         ! - Interne
-        integer                  :: i, imax
-        real(pr)                 :: h, q
-        real(pr), dimension(2)   :: Ugauche, Udroite, Umid
-        real(pr),dimension(2)    :: F
-        real(pr)                 :: unsurdx, det_J, det_J2
-        real(pr), dimension(2,2) :: J, J2
-        real(pr), dimension(size(flux%hnp1)) :: b_i
+        integer                                     :: i, imax
+        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ug, Ud, F  ! - Taille imax+1
+        real(pr), dimension(1:size(flux%hnp1)-2, 2) :: Unp1       ! - Taille imax
+        real(pr), dimension(0:size(flux%hnp1)-1, 2) :: Un         ! - Taille imax+2 (0:imax+1)
+        real(pr)                                    :: unsurdx
+        real(pr), dimension(1:size(flux%hnp1)-1)    :: b_i
 
 
         unsurdx = 1./dx
@@ -50,126 +48,64 @@ contains
             dt = cfl * dx/(2 * MAXVAL(b_i))
         end if
 
+        Un(0:imax+1,1) = flux%hnp1(0:imax+1)
+        Un(0:imax+1,2) = flux%hnp1(0:imax+1)*flux%unp1(0:imax+1)
+
         select case(flux%choix_approx_flux)
 
         case(1)
 
-        do i = 0, imax
+            Ug(1:imax+1,:) = Un(0:imax,:)
+            Ud(1:imax+1,:) = Un(1:imax+1,:)
 
-            Ugauche(1) = flux%hnp1(i)
-            Ugauche(2) = flux%hnp1(i)*flux%unp1(i)
-            Udroite(1) = flux%hnp1(i+1)
-            Udroite(2) = flux%hnp1(i+1)*flux%unp1(i+1)
+            F = flux_num_2(imax, Ug, Ud, b_i)
 
-            F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, Umid, b_i(i+1), unsurdx, dt, det_J)
+            Unp1(1:imax,1) = flux%hnp1(1:imax) - dt*unsurdx*(F(2:imax+1,1) - F(1:imax,1))
+            Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
 
-            flux%f_h(i+1) = F(1)
-            flux%f_q(i+1) = F(2)
+        case(2) ! - Ordre 2 stencile (Ui-1, Ui, Ui+1)
 
-        end do
-
-        ! case(2)
-
-        !     do i = 1, imax
-
-        !         call A_roe(flux%hnp1(i-1), flux%hnp1(i), flux%hnp1(i+1), flux%unp1(i-1), flux%unp1(i), flux%unp1(i+1)&
-        !         , J, det_J, unsurdx)
-
-        !         Ugauche(1) = flux%hnp1(i)
-        !         Ugauche(2) = flux%hnp1(i)*flux%unp1(i)
-        !         Udroite(1) = flux%hnp1(i+1)
-        !         Udroite(2) = flux%hnp1(i+1)*flux%unp1(i+1)
-    
-        !         F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, Umid, b_i(i+1), unsurdx, dt, det_J)
-    
-        !         flux%f_h(i+1) = F(1)
-        !         flux%f_q(i+1) = F(2)
-    
-        !     end do
-
-        ! case(3)
-
-        !     do i = 1, imax
-
-        !         call Jacobienne(flux%hnp1(i+1), flux%unp1(i+1), J, det_J, J2, det_J2)
-        !         Umid(1) = flux%hnp1(i)
-        !         Umid(2) = flux%hnp1(i)*flux%unp1(i)
-        !         Ugauche(1) = flux%hnp1(i-1)
-        !         Ugauche(2) = flux%hnp1(i-1)*flux%unp1(i-1)
-        !         Udroite(1) = flux%hnp1(i+1)
-        !         Udroite(2) = flux%hnp1(i+1)*flux%unp1(i+1)
-    
-        !         F = flux_num(flux%choix_approx_flux, Ugauche, Udroite, Umid, b_i(i+1), unsurdx, dt, det_J2)
-    
-        !         flux%f_h(i+1) = F(1)
-        !         flux%f_q(i+1) = F(2)
-    
-        !     end do
+            Unp1 = RK2_SSP(Un, Ug, Ud, dt, unsurdx, b_i, imax)
 
         end select
 
 
-        ! -- Mise à jour des h et q au nouveau pas de temps sans les bords
-        do i = 1, imax
+        flux%hnp1(1:imax) = Unp1(1:imax,1)
+        flux%unp1(1:imax) = Unp1(1:imax,2)/Unp1(1:imax,1)
 
-            h = flux%hnp1(i) - dt*unsurdx*(flux%f_h(i+1) - flux%f_h(i))
-            q = flux%hnp1(i)*flux%unp1(i) - dt*unsurdx*(flux%f_q(i+1) - flux%f_q(i))
-
-            flux%hnp1(i) = h
-            flux%unp1(i) = q/h
-
-        end do
-
-
-        ! condition de Neumann sur les bords
-        flux%hnp1(0) = flux%hnp1(1) 
+        ! -- Conditions de Neumann au bord
+        flux%hnp1(0) = flux%hnp1(1)
         flux%unp1(0) = flux%unp1(1)
         flux%hnp1(imax+1) = flux%hnp1(imax)
         flux%unp1(imax+1) = flux%unp1(imax)
 
-        ! flux%unp1(1) = flux%unp1(2)
-        ! flux%hnp1(imax) = flux%hnp1(imax-1)
-        ! flux%unp1(imax) = flux%unp1(imax-1)
+        tn = tn + dt
 
 
     end subroutine sol_approx_tn
 
 ! ###########################################################################################
 
-    ! -- Calcul du flux numérique
-    function flux_num(choix_flux, Ug, Ud, Um, bi, unsurdx, dt, det_J)result(F)
+    function flux_num_2(imax, Ug, Ud, bi)result(F)
 
-        real(pr), dimension(2), intent(in)  :: Ug, Ud, Um
-        integer, intent(in)                 :: choix_flux
-        real(pr), intent(in)                :: bi
-        real(pr), intent(in)                :: unsurdx, dt, det_J
-        real(pr), dimension(2)              :: F 
+        integer, intent(in)                          :: imax
+        real(pr), dimension(1:imax+1, 2), intent(in) :: Ug, Ud
+        real(pr), dimension(imax+1), intent(in)      :: bi
 
-        select case(choix_flux)
+        real(pr), dimension(1:imax+1, 2)             :: F
 
-        case(1)
+        ! -- Local
+        integer :: i
 
-            F(1) = 0.5*(Ud(2) + Ug(2)) - 0.5*bi*(Ud(1) - Ug(1))
-            F(2) = (Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2. + Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2.)*0.5 - 0.5*bi*(Ud(2) - Ug(2))
+        do i=1, imax+1
 
-        case(2)
+            F(i,1) = 0.5*(Ud(i,2) + Ug(i,2)) - 0.5*bi(i)*(Ud(i,1) - Ug(i,1))
+            F(i,2) = (Ug(i,2)*Ug(i,2)/Ug(i,1) + g*Ug(i,1)*Ug(i,1)/2. + Ud(i,2)*Ud(i,2)/Ud(i,1)&
+            + g*Ud(i,1)*Ud(i,1)/2.)*0.5 - 0.5*bi(i)*(Ud(i,2) - Ug(i,2))
 
-            F(1) = 0.5*(Ud(2) + Ug(2)) - 0.5*det_J*(Ud(1) - Ug(1))
-            F(2) = (Ug(2)*Ug(2)/Ug(1) + g*Ug(1)*Ug(1)/2. + Ud(2)*Ud(2)/Ud(1) + g*Ud(1)*Ud(1)/2.)*0.5 - 0.5*det_J*(Ud(2) - Ug(2))
+        end do
 
-        case(3)
-
-            F(1) = 0.5*(Um(2) + Ud(2))- dt*unsurdx*0.5*(Ud(2)/Ud(1)*(Ud(1)-Um(1))+Ud(1)*(Ud(2)-Um(2)) - &
-            dt*unsurdx*0.5*((Ud(2)*Ud(2)/(Ud(1)*Ud(1)) + g*Ud(1))*(Ud(1)-2*Um(1)+Ug(1)) + 2*Ud(2)*(Ud(2)-2*Um(2)+Ug(2))))
-
-            F(2) = 0.5*(Um(2)*Um(2)/Um(1)+g*Um(1)**2/2. + Ud(2)*Ud(2)/Ud(1)+g*Ud(1)**2/2.)- &
-            dt*unsurdx*0.5*(g*(Ud(1)-Um(1)+Ud(2)/Ud(1)*(Ud(2)-Um(2))) - dt*unsurdx*0.5*(2*g*Ud(2)/Ud(1)*(Ud(1)-2*Um(1)+Ug(1))&
-            +(Ud(1)*g + Ud(2)*Ud(2)/(Ud(1)*Ud(1))) * (Ud(2)-2*Um(2)+Ug(2))))
-
-        end select
-
-
-    end function flux_num
+    end function
 
 ! #############################################################################################
 
@@ -184,82 +120,147 @@ contains
     end function f_bi
 
 
-    ! -- Calcul de la matrice de Roe
-    subroutine A_roe(hg, hm, hd, ug, um, ud, A, det_A, unsurdx)
-        real(pr), intent(in)                  :: hg, hm, hd, ug, um, ud, unsurdx
-        real(pr), dimension(:,:), intent(out) :: A 
-        real(pr), intent(out)                 :: det_A
-
-        A(1,1) = 1/2.*(ud-ug)+unsurdx*um
-        A(1,2) = 1/2.*(hd-hg)+unsurdx*hm
-        A(2,1) = unsurdx*g
-        A(2,2) = 1/2.*(ud-ug)+unsurdx*um
-
-        det_A = (1/2.*(ud-ug)+unsurdx*um)**2 - unsurdx*g*1/2.*(hd-hg)+unsurdx*hm
-
-    end subroutine
-
-
-    ! -- Calcul de la matrice de Roe
-    subroutine Jacobienne(h, u, J, det_J, J2, det_J2 )
-        real(pr), intent(in)                  :: h, u
-        real(pr), dimension(:,:), intent(out) :: J, J2 
-        real(pr), intent(out)                 :: det_J, det_J2
-
-        J(1,1) = u
-        J(1,2) = h
-        J(2,1) = g
-        J(2,2) = u
-
-        J2(1,1) = u**2 + g*h
-        J2(1,2) = 2*u*h
-        J2(2,1) = 2*u*g
-        J2(2,2) = h*g + u**2
-
-        det_J = u**2 - g*h
-        det_J2 = (u**2 + g*h) * (h*g + u**2) - 4*u*u*g*h
-
-    end subroutine
-
 ! #############################################################################################
 
-    function Error_fct(approx, exa, dx, norme)result(err)
+    ! -- RK2 - Heun - SSP
+    function RK2_SSP(Un, Ug, Ud, dt, unsurdx, bi, imax)result(Unp1)
 
-        ! -- Code pour les erreur 
-        ! - norme = 1 (L1)
-        ! - norme = 2 (L2)
-        ! - norme = 3 (Linfini)
+        real(pr), intent(in)                 :: dt, unsurdx
+        real(pr), dimension(:,:), intent(inout) :: Ug, Ud
+        real(pr), dimension(:,:), intent(in) :: Un
+        real(pr), dimension(:), intent(in)   :: bi
+        integer, intent(in)                  :: imax
 
-        real(pr), dimension(:), intent(in) :: approx, exa
-        real(pr), intent(in)               :: dx
-        integer, intent(in)                :: norme
+        real(pr), dimension(1:imax, 2)   :: Unp1
 
-        real(pr)                           :: err
+        ! -- Local
+        real(pr), dimension(0:imax+1, 2)   :: k1, k2
+        real(pr), dimension(1:imax+1, 2) :: F
 
-        ! -- Locale
-        integer :: i
+        call discretisation_second_order(imax, Un, Ug, Ud)
+        F = flux_num_2(imax, Ug, Ud, bi)
+        k1(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
+        k1(0, :) = 0.
+        k1(imax+1, :) = 0.
 
-        err = 0.
-        select case(norme)
-        case(1) ! Norme L1
-            do i=1,size(approx)
-                err = err + dx*abs(exa(i)-approx(i))
-            end do
+        call discretisation_second_order(imax, Un+dt*k1, Ug, Ud)
+        F = flux_num_2(imax, Ug, Ud, bi)
+        k2(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
-        case(2)
-            do i=1,size(approx)
-                err = err + dx*abs(exa(i)-approx(i))**2
-            end do
-            err = sqrt(err)
+        Unp1(1:imax, :) = Un(1:imax, :) + dt*(1./2*k1(1:imax, :) + 1./2*k2(1:imax, :))
 
-        case(3)
-            err = maxval(abs(exa(:)-approx(:)))
-        end select
 
     end function
 
+    subroutine discretisation_second_order(imax, Un, Ug, Ud)
+        
+        integer, intent(in)                   :: imax
+        real(pr), dimension(0:imax+1,2), intent(in)  :: Un
+        real(pr), dimension(1:imax+1,2), intent(out) :: Ug, Ud
 
+        Ug(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
+        Ud(1:imax,:) = 5./6*Un(2:imax+1,:) + 1./3*Un(1:imax,:) - 1./6*Un(0:imax-1,:)
 
+        Ug(imax+1,:) = 3./2*Un(imax-2,:) - 1./2*Un(imax-1,:)
+        Ud(imax+1,:) = 1./2*(Un(imax-1,:) + Un(imax,:))
+
+    end subroutine
+! #############################################################################################
+
+    subroutine evolution_capteur(name_file,imax,iter,dt,nb_capteurs,Pos_capteurs)
+        
+        !-----Variables d'entrée-----!
+        integer, intent(in)             :: imax, iter, nb_capteurs
+        real(pr),dimension(0:nb_capteurs-1),intent(in) :: Pos_capteurs
+        character(len=30),intent(in)    :: name_file
+        real(PR),intent(in)             :: dt
+
+        !-----Variables de sortie-----!
+        character(len=30)            :: name_file_out
+        character(len=10)            :: xch
+        character(len=3)             :: ich
+
+        !-----Variables locales-----!
+        integer,dimension(:),allocatable  :: Pos_maillage
+        real,dimension(:),allocatable     :: H
+        real(pr)                          :: x, a, xim1, t
+        integer                           :: k, km1, Nmax, j, l, iostatus, i
+
+        allocate(Pos_maillage(0:nb_capteurs-1),H(0:nb_capteurs-1))
+
+        name_file_out = "OUT/capteur_"//trim(ich)//".txt"
+
+        open(10,file=name_file,action="read")
+
+        Nmax=10000
+        a=-40000             !Par sécurité
+        xim1=0
+        k=0
+
+        !---------- Recherche du point du maillage le plus proche pour chaque capteurs ------!
+
+        do i = 0,nb_capteurs-1
+        !--- On considère que Pos_capteurs est classé de manière croissante ---!
+            print*, "position du capteur x = ", Pos_capteurs(i)
+            do while (Pos_capteurs(i)>a ) 
+                xim1=a                          ! On stocke le point précédent !
+                read(10,*) a                    ! On lit le point suivant !
+                k = k + 1                       ! k compte la position du  point du maillage !
+            end do
+            Pos_maillage(i) = k
+            !print*, "Pour le capteur numéro ", i, ", le point de maillagee le plus proche est le numéro ", k
+            !print*, "en x = ", a
+            
+        end do
+
+        close(10)
+
+        ! ---- Choix arbitraire de prendre le point juste d'après ----!
+
+        ! ---- Ecriture de l'évolution des différents capteurs en fonction  
+
+        
+        !!name_file_out = "OUT/capteur_"//trim(ich)//"_x_"//trim(xch)//".txt"
+        name_file_out = "OUT/capteur.txt"
+        open(11,file=name_file_out,action="write")
+
+        open(10,file=name_file,action="read")
+
+        t = 0._PR
+        
+        do l = 1,iter
+            km1 = 0
+            do i = 0, nb_capteurs -1
+                k = Pos_maillage(i)
+
+                do j = 1, k-1-km1
+                    read(10,*,iostat=iostatus)
+                end do
+                km1 = k
+                read(10,*,iostat=iostatus) a, H(i)
+                
+                
+            end do
+
+            write(11, '(F0.3,F12.6,F12.6,F12.6)') t, (H(j), j=0, nb_capteurs-1)
+
+            do j = k+1, imax + 3
+                read(10,*,iostat=iostatus)
+                if ( iostatus/=0 ) then
+                    print*, "Fin du fichier"
+                    exit
+                end if
+            end do
+
+            t=t+dt
+            
+        end do
+        
+        close(11)
+        close(10)
+
+        print*, "Le nom du fichier du capteur est ",name_file_out
+    end subroutine evolution_capteur
 
 
 end module
