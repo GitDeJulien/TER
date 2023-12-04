@@ -27,9 +27,10 @@ contains
 
         ! - Interne
         integer                                     :: i, imax
-        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ug, Ud, F  ! - Taille imax+1
-        real(pr), dimension(1:size(flux%hnp1)-2, 2) :: Unp1       ! - Taille imax
-        real(pr), dimension(0:size(flux%hnp1)-1, 2) :: Un         ! - Taille imax+2 (0:imax+1)
+        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ud  ! - Taille imax+1 (1:imax+1)
+        real(pr), dimension(0:size(flux%hnp1)-2, 2) :: Ug      ! - Taille imax+1  (0:imax)
+        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: F          ! - Taille imax
+        real(pr), dimension(0:size(flux%hnp1)-1, 2) :: Un, Unp1        ! - Taille imax+2 (0:imax+1)
         real(pr)                                    :: unsurdx
         real(pr), dimension(1:size(flux%hnp1)-1)    :: b_i
 
@@ -55,32 +56,33 @@ contains
 
         case(1)
 
-            Ug(1:imax+1,:) = Un(0:imax,:)
+            Ug(0:imax,:) = Un(0:imax,:)
             Ud(1:imax+1,:) = Un(1:imax+1,:)
+
+            !call discretisation_second_order(imax, Un, Ug, Ud)
 
             F = flux_num_2(imax, Ug, Ud, b_i)
 
+            ! -- Euler sur le temps
             Unp1(1:imax,1) = flux%hnp1(1:imax) - dt*unsurdx*(F(2:imax+1,1) - F(1:imax,1))
             Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
+
+            ! -- Condition de bord - Neumann
+            Unp1(0,:) = Unp1(1,:)
+            Unp1(imax+1,:) = Unp1(imax,:)
 
         case(2) ! - Ordre 2 stencile (Ui-1, Ui, Ui+1)
 
             Unp1 = RK2_SSP(Un, Ug, Ud, dt, unsurdx, b_i, imax)
+            call test(flux, imax, unsurdx, dt, b_i, Ug, Ud, Un, Unp1)
 
         end select
 
 
-        flux%hnp1(1:imax) = Unp1(1:imax,1)
-        flux%unp1(1:imax) = Unp1(1:imax,2)/Unp1(1:imax,1)
-
-        ! -- Conditions de Neumann au bord
-        flux%hnp1(0) = flux%hnp1(1)
-        flux%unp1(0) = flux%unp1(1)
-        flux%hnp1(imax+1) = flux%hnp1(imax)
-        flux%unp1(imax+1) = flux%unp1(imax)
+        flux%hnp1(0:imax+1) = Unp1(0:imax+1,1)
+        flux%unp1(0:imax+1) = Unp1(0:imax+1,2)/Unp1(0:imax+1,1)
 
         tn = tn + dt
-
 
     end subroutine sol_approx_tn
 
@@ -89,21 +91,17 @@ contains
     function flux_num_2(imax, Ug, Ud, bi)result(F)
 
         integer, intent(in)                          :: imax
-        real(pr), dimension(1:imax+1, 2), intent(in) :: Ug, Ud
+        real(pr), dimension(1:imax+1, 2), intent(in) :: Ud
+        real(pr), dimension(0:imax, 2), intent(in)   :: Ug
         real(pr), dimension(imax+1), intent(in)      :: bi
 
         real(pr), dimension(1:imax+1, 2)             :: F
 
-        ! -- Local
-        integer :: i
 
-        do i=1, imax+1
-
-            F(i,1) = 0.5*(Ud(i,2) + Ug(i,2)) - 0.5*bi(i)*(Ud(i,1) - Ug(i,1))
-            F(i,2) = (Ug(i,2)*Ug(i,2)/Ug(i,1) + g*Ug(i,1)*Ug(i,1)/2. + Ud(i,2)*Ud(i,2)/Ud(i,1)&
-            + g*Ud(i,1)*Ud(i,1)/2.)*0.5 - 0.5*bi(i)*(Ud(i,2) - Ug(i,2))
-
-        end do
+        F(1:imax+1,1) = 0.5*(Ud(1:imax+1,2) + Ug(0:imax,2)) - 0.5*bi(1:imax+1)*(Ud(1:imax+1,1) - Ug(0:imax,1))
+        F(1:imax+1,2) = (Ug(0:imax,2)*Ug(0:imax,2)/Ug(0:imax,1) + &
+        g*Ug(0:imax,1)*Ug(0:imax,1)/2. + Ud(1:imax+1,2)*Ud(1:imax+1,2)/Ud(1:imax+1,1)&
+        + g*Ud(1:imax+1,1)*Ud(1:imax+1,1)/2.)*0.5 - 0.5*bi(1:imax+1)*(Ud(1:imax+1,2) - Ug(0:imax,2))
 
     end function
 
@@ -125,30 +123,38 @@ contains
     ! -- RK2 - Heun - SSP
     function RK2_SSP(Un, Ug, Ud, dt, unsurdx, bi, imax)result(Unp1)
 
-        real(pr), intent(in)                 :: dt, unsurdx
-        real(pr), dimension(:,:), intent(inout) :: Ug, Ud
-        real(pr), dimension(:,:), intent(in) :: Un
-        real(pr), dimension(:), intent(in)   :: bi
-        integer, intent(in)                  :: imax
+        real(pr), intent(in)                           :: dt, unsurdx
+        integer, intent(in)                            :: imax
+        real(pr), dimension(0:imax,2), intent(inout)   :: Ug
+        real(pr), dimension(1:imax+1,2), intent(inout) :: Ud
+        real(pr), dimension(0:imax+1,2), intent(in)    :: Un
+        real(pr), dimension(:), intent(in)             :: bi
 
-        real(pr), dimension(1:imax, 2)   :: Unp1
+        real(pr), dimension(0:imax+1, 2)   :: Unp1
 
         ! -- Local
-        real(pr), dimension(0:imax+1, 2)   :: k1, k2
+        real(pr), dimension(0:imax+1, 2) :: k1, k2, UnStar
         real(pr), dimension(1:imax+1, 2) :: F
+
 
         call discretisation_second_order(imax, Un, Ug, Ud)
         F = flux_num_2(imax, Ug, Ud, bi)
-        k1(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
-        k1(0, :) = 0.
-        k1(imax+1, :) = 0.
+        !k1(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
+        k1(1:imax, :) = -unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
-        call discretisation_second_order(imax, Un+dt*k1, Ug, Ud)
+        Unstar(1:imax,:) = Un(1:imax,:) + dt*k1(1:imax,:)
+        UnStar(0,:) = Un(0,:)
+        UnStar(imax+1,:) = Un(imax+1,:)
+
+        call discretisation_second_order(imax, UnStar, Ug, Ud)
         F = flux_num_2(imax, Ug, Ud, bi)
-        k2(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
+        !k2(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
+        k2(1:imax, :) = -unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
         Unp1(1:imax, :) = Un(1:imax, :) + dt*(1./2*k1(1:imax, :) + 1./2*k2(1:imax, :))
 
+        Unp1(0,:) = Unp1(1,:)
+        Unp1(imax+1,:) = Unp1(imax,:)
 
     end function
 
@@ -156,13 +162,69 @@ contains
         
         integer, intent(in)                   :: imax
         real(pr), dimension(0:imax+1,2), intent(in)  :: Un
-        real(pr), dimension(1:imax+1,2), intent(out) :: Ug, Ud
+        real(pr), dimension(0:imax,2), intent(out)   :: Ug
+        real(pr), dimension(1:imax+1,2), intent(out) :: Ud
 
-        Ug(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
-        Ud(1:imax,:) = 5./6*Un(2:imax+1,:) + 1./3*Un(1:imax,:) - 1./6*Un(0:imax-1,:)
+        !Ug(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
+        Ug(1:imax,:) = 5./6*Un(0:imax-1,:) + 1./3*Un(1:imax,:) - 1./6*Un(2:imax+1,:)
+        !Ud(1:imax,:) = 5./6*Un(2:imax+1,:) + 1./3*Un(1:imax,:) - 1./6*Un(0:imax-1,:)
+        Ud(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
 
-        Ug(imax+1,:) = 3./2*Un(imax-2,:) - 1./2*Un(imax-1,:)
-        Ud(imax+1,:) = 1./2*(Un(imax-1,:) + Un(imax,:))
+        Ug(0,:) = Un(0,:)
+        Ud(imax+1,:) = Un(imax+1, :)
+
+    end subroutine
+
+    subroutine test(flux, imax, unsurdx, dt, bi, Ug, Ud, Un, Unp1)
+
+        type(flux_type)     :: flux
+        integer, intent(in) :: imax
+        real(pr), intent(in):: unsurdx, dt
+        real(pr), dimension(:), intent(in)             :: bi
+        real(pr), dimension(0:imax,2), intent(inout)   :: Ug
+        real(pr), dimension(1:imax+1,2), intent(inout) :: Ud
+        real(pr), dimension(0:imax+1,2), intent(inout) :: Un
+        real(pr), dimension(0:imax+1, 2), intent(inout) :: Unp1
+
+        ! -- Local
+        integer :: i
+        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: F
+        integer :: valid
+        integer :: cpt
+
+        valid = 1
+        cpt = 0
+
+        do i=1,imax+1
+            if (Unp1(i, 1)<1) then
+
+                valid = 0
+                
+            end if
+        end do
+
+        if (valid == 0) then
+            Un(0:imax+1,1) = flux%hnp1(0:imax+1)
+            Un(0:imax+1,2) = flux%hnp1(0:imax+1)*flux%unp1(0:imax+1)
+
+            Ug(0:imax,:) = Un(0:imax,:)
+            Ud(1:imax+1,:) = Un(1:imax+1,:)
+
+            F = flux_num_2(imax, Ug, Ud, bi)
+
+            ! -- Euler sur le temps
+            Unp1(1:imax,1) = flux%hnp1(1:imax) - dt*unsurdx*(F(2:imax+1,1) - F(1:imax,1))
+            Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
+
+            ! -- Condition de bord - Neumann
+            Unp1(0,:) = Unp1(1,:)
+            Unp1(imax+1,:) = Unp1(imax,:)
+
+        else
+            cpt = cpt + 1
+            print*, "cpt =", cpt
+
+        end if
 
     end subroutine
 
