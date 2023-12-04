@@ -9,7 +9,7 @@ module mod_erreur
 contains
 
 
-    function Error_fct(approx, exa, norme, dx)result(err)
+    function Error_fct(approx, exa, dx, norme)result(err)
 
         ! -- Code pour les erreur 
         ! - norme = 1 (L1)

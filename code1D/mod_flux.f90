@@ -228,6 +228,100 @@ contains
 
     end subroutine
 
+    subroutine evolution_capteur(name_file,imax,iter,dt,nb_capteurs,Pos_capteurs)
+        
+        !-----Variables d'entrée-----!
+        integer, intent(in)             :: imax, iter, nb_capteurs
+        real(pr),dimension(0:nb_capteurs-1),intent(in) :: Pos_capteurs
+        character(len=30),intent(in)    :: name_file
+        real(PR),intent(in)             :: dt
+
+        !-----Variables de sortie-----!
+        character(len=30)            :: name_file_out
+        character(len=10)            :: xch
+        character(len=3)             :: ich
+
+        !-----Variables locales-----!
+        integer,dimension(:),allocatable  :: Pos_maillage
+        real,dimension(:),allocatable     :: H
+        real(pr)                          :: x, a, xim1, t
+        integer                           :: k, km1, Nmax, j, l, iostatus, i
+
+        allocate(Pos_maillage(0:nb_capteurs-1),H(0:nb_capteurs-1))
+
+        name_file_out = "OUT/capteur_"//trim(ich)//".txt"
+
+        open(10,file=name_file,action="read")
+
+        Nmax=10000
+        a=-40000             !Par sécurité
+        xim1=0
+        k=0
+
+        !---------- Recherche du point du maillage le plus proche pour chaque capteurs ------!
+
+        do i = 0,nb_capteurs-1
+        !--- On considère que Pos_capteurs est classé de manière croissante ---!
+            print*, "position du capteur x = ", Pos_capteurs(i)
+            do while (Pos_capteurs(i)>a ) 
+                xim1=a                          ! On stocke le point précédent !
+                read(10,*) a                    ! On lit le point suivant !
+                k = k + 1                       ! k compte la position du  point du maillage !
+            end do
+            Pos_maillage(i) = k
+            !print*, "Pour le capteur numéro ", i, ", le point de maillagee le plus proche est le numéro ", k
+            !print*, "en x = ", a
+            
+        end do
+
+        close(10)
+
+        ! ---- Choix arbitraire de prendre le point juste d'après ----!
+
+        ! ---- Ecriture de l'évolution des différents capteurs en fonction  
+
+        
+        !!name_file_out = "OUT/capteur_"//trim(ich)//"_x_"//trim(xch)//".txt"
+        name_file_out = "OUT/capteur.txt"
+        open(11,file=name_file_out,action="write")
+
+        open(10,file=name_file,action="read")
+
+        t = 0._PR
+        
+        do l = 1,iter
+            km1 = 0
+            do i = 0, nb_capteurs -1
+                k = Pos_maillage(i)
+
+                do j = 1, k-1-km1
+                    read(10,*,iostat=iostatus)
+                end do
+                km1 = k
+                read(10,*,iostat=iostatus) a, H(i)
+                
+                
+            end do
+
+            write(11, '(F0.3,F12.6,F12.6,F12.6)') t, (H(j), j=0, nb_capteurs-1)
+
+            do j = k+1, imax + 3
+                read(10,*,iostat=iostatus)
+                if ( iostatus/=0 ) then
+                    print*, "Fin du fichier"
+                    exit
+                end if
+            end do
+
+            t=t+dt
+            
+        end do
+        
+        close(11)
+        close(10)
+
+        print*, "Le nom du fichier du capteur est ",name_file_out
+    end subroutine evolution_capteur
 
 
 end module

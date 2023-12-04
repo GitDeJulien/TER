@@ -9,18 +9,23 @@ contains
 
 
     ! -- Initialisation des paramètres
-    subroutine initialisation(imax, x_i, h_i, u_i)
+    subroutine initialisation(imax, x_i, h_i, u_i, cfl,nb_capteurs,Pos_capteurs,params)
+
 
         ! -- Variable externe
-        integer, intent(in)                     :: imax
-        real(pr), dimension(0:imax+1) , intent(in)     :: x_i
-        real(pr), dimension(0:imax+1) , intent(inout)  :: h_i, u_i
+        integer, intent(inout)                             :: imax, nb_capteurs
+        real(pr), dimension(:), allocatable, intent(inout) :: h_i, u_i, x_i,Pos_capteurs
+        real(pr), intent(inout)                            :: cfl
+        character(len=30),intent(in)                       :: params
 
         ! -- Variable interne
         real(pr)  :: h_init_am, h_init_av
+        real(pr)  :: h_init_am, h_init_av
         integer   :: i, choix_init
 
-        open(unit = 2, file = "params.dat", action = "read")
+        print*,"test 1"        
+        open(unit = 2, file = params, action = "read")
+        print*,"test 2"        
 
         read(2,*)
         read(2,*)
@@ -29,6 +34,17 @@ contains
         read(2,*) h_init_av
         read(2,*)
         read(2,*) choix_init
+        read(2,*) cfl
+        read(2,*) nb_capteurs
+        print*, " nb capteurs = ",nb_capteurs
+
+        print*, "A la position :"
+        if ( nb_capteurs /= 0 ) then
+            do i = 0, nb_capteurs-1
+                read(2,*) Pos_capteurs(i) 
+                print*, "x = ",Pos_capteurs(i) 
+            end do
+        end if
 
         close(2)
 
@@ -54,18 +70,22 @@ contains
 
     end subroutine initialisation
 
-    subroutine maillage(imax, tmax, dx, cfl, x_i)
+    subroutine maillage(imax, tmax, dx, cfl, x_i,params)
         ! -- Variable externe
-        integer, intent(in)                    :: imax
-        real(pr), intent(inout)                :: dx, tmax
-        real(pr), intent(inout)                :: cfl
-        real(pr), dimension(0:imax+1) , intent(inout) :: x_i
+        integer, intent(in)                             :: imax
+        real(pr), intent(inout)                         :: dx, tmax
+        real(pr), intent(inout)                         :: cfl
+        real(pr), dimension(0:imax+1) , intent(inout)   :: x_i
+        character(len=30),intent(inout)                 :: params
+
 
         ! -- Variable interne
         integer   :: i
         real(pr)  :: L, x_min, x_max
+    
 
-        open(unit = 2, file = "params.dat", action = "read")
+        
+        open(unit = 2, file = params, action = "read")
 
         read(2,*)
         read(2,*) x_min
