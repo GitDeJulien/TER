@@ -14,7 +14,9 @@ contains
 
         ! -- Variable externe
         integer, intent(inout)                             :: imax, nb_capteurs
-        real(pr), dimension(:), allocatable, intent(inout) :: h_i, u_i, x_i,Pos_capteurs
+        real(pr), dimension(0:imax+1) , intent(in)     :: x_i
+        real(pr), dimension(0:imax+1) , intent(inout)  :: h_i, u_i
+        real(pr), dimension(:), allocatable, intent(inout) :: Pos_capteurs
         real(pr), intent(inout)                            :: cfl
         character(len=30),intent(in)                       :: params
 
@@ -69,7 +71,7 @@ contains
 
     end subroutine initialisation
 
-    subroutine maillage(imax, tmax, dx, cfl, x_i,params)
+    subroutine maillage(imax, tmax, dx, cfl, x_i, params)
         ! -- Variable externe
         integer, intent(in)                             :: imax
         real(pr), intent(inout)                         :: dx, tmax
