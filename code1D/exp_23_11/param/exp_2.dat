@@ -1,0 +1,14 @@
+2000      (imax)
+-300       (xmin)
+300        (xmax)
+7.3        (hauteur_init en amont)
+1        (hauteur_init en avale)
+12       (tmax)
+1        (choix condition initial (1 = fonction créneau 3 modes))
+0.6     (cfl)
+3        (Nombre de capteur)
+-140.5    (Position premier capteur)
+180        (Position second capteur)
+71.4     (Position troisième capteur)
+
+
