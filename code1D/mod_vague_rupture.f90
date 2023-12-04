@@ -20,7 +20,6 @@ contains
 
         ! -- Variable interne
         real(pr)  :: h_init_am, h_init_av
-        real(pr)  :: h_init_am, h_init_av
         integer   :: i, choix_init
 
         print*,"test 1"        
