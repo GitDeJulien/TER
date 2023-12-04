@@ -14,9 +14,8 @@ program main
     real(pr)                            :: tn, dx, tmax, dt, cfl
     real(pr), dimension(:), allocatable :: x_i, h_i, u_i
     real(pr), dimension(:), allocatable :: sol_exa_h, sol_exa_u, Pos_capteurs
-    real(pr)                            :: errorL1, errorL2, errorLi,error
-    real(pr), dimension(6)             :: Vect_err 
-   
+    real(pr)                            :: errorL1, errorL2, errorLi
+    real(pr), dimension(6)              :: Vect_err
     real(pr)                            :: sigma, lambda_g, lambda_etoile, h_etoile, u_etoile
 
     character(len=30)                   :: name_file,params,date,num
@@ -35,6 +34,7 @@ program main
     read(*,*) num
 
     params = "exp_"//trim(date)//"/param/exp_"//trim(num)//".dat"
+    !params = "params.dat"
 
     open(unit = 2, file = params, action = "read")
         read(2,*) imax
@@ -48,8 +48,7 @@ program main
         read(2,*) nb_capteurs
     close(2)
 
-    allocate(Pos_capteurs(0:nb_capteurs-1)) 
-    
+    allocate(Pos_capteurs(0:nb_capteurs-1))
 
 
     print*, "Entrer votre choix d'approximation du flux : "
@@ -78,16 +77,16 @@ program main
     allocate(flux%f_h(0:imax+1), flux%f_q(0:imax+1))
     allocate(flux%hnp1(0:imax+1), flux%unp1(0:imax+1))
     allocate(sol_exa_h(0:imax+1), sol_exa_u(0:imax+1))
-         
+
 
     print*,"imax = ",imax
 
     ! -- Initialisation maillage
     print*,"Calcul maillage..."
-    call maillage(imax, tmax, dx, cfl, x_i,params)
+    call maillage(imax, tmax, dx, cfl, x_i, params)
     print*,"Maillage calculé."
     ! initialisation maillage + condition initiale
-    call initialisation(imax, x_i, h_i, u_i,cfl,nb_capteurs,Pos_capteurs,params)
+    call initialisation(imax, x_i, h_i, u_i,cfl,nb_capteurs,Pos_capteurs, params)
 
     ! -- Initialisation des flux 
     flux%hnp1 = h_i
@@ -122,7 +121,7 @@ program main
 
         iter = iter + 1
         ! -- Solution exacte
-        call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u)
+        call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u, params)
 
         ! -- Solution approchée
         call sol_approx_tn(flux, dt, cfl, dx, tn)
@@ -149,9 +148,9 @@ program main
 
     end do
 
-     ! -- Calcul de la vitesse de l'onde de choc
+    ! -- Calcul de la vitesse de l'onde de choc
     print*, "----------------------------------"
-    call f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile)
+    call f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile, params)
     print*, "La vitesse de l'onde de choc est de  ", sigma, "Unitée à déterminé"
     
     
@@ -199,7 +198,7 @@ program main
 
     print*,"Fin."
 
- 
+
 
 
 

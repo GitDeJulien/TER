@@ -10,9 +10,10 @@ module mod_sol_exact_2
 
 contains
 
-    subroutine sol_exact_tn(flux, tn, x_i, sol_h, sol_u)
+    subroutine sol_exact_tn(flux, tn, x_i, sol_h, sol_u, params)
 
         type(flux_type), intent(in)         :: flux
+        character(len=30),intent(in)        :: params
         real(pr), intent(in)                :: tn
         real(pr), dimension(:), intent(in)  :: x_i
         real(pr), dimension(:), intent(out) :: sol_h, sol_u
@@ -23,10 +24,10 @@ contains
         real(pr) :: h, u, h_etoile, u_etoile
         real(pr) :: h_init_am, h_init_av
 
-        call hauteur(h_init_am, h_init_av)
+        call hauteur(h_init_am, h_init_av, params)
 
         imax = size(x_i)-2
-        call f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile)
+        call f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile, params)
 
         do i=1, imax+2
 
@@ -37,7 +38,7 @@ contains
                 
             else if (x_i(i) >= lambda_g*tn .AND. x_i(i) < lambda_etoile*tn) then
 
-                call detente_h_u(x_i(i), tn, h, u)
+                call detente_h_u(x_i(i), tn, h, u, params)
                 sol_h(i) = h
                 sol_u(i) = u
 
@@ -59,9 +60,10 @@ contains
 
     ! ##################################################################
 
-    subroutine f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile)
+    subroutine f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile, params)
 
         type(flux_type), intent(in)  :: flux
+        character(len=30),intent(in) :: params
         real(pr), intent(out)        :: sigma
         real(pr), intent(out)        :: lambda_g, lambda_etoile
         real(pr), intent (out)       :: h_etoile, u_etoile
@@ -75,7 +77,7 @@ contains
         imax = size(flux%hnp1)-2
         eps = 10.**(-5)
 
-        call hauteur(h_init_am, h_init_av)
+        call hauteur(h_init_am, h_init_av, params)
 
         h_etoile = 0.
         lambda_g = -sqrt(g*h_init_am)
@@ -102,15 +104,16 @@ contains
 
     ! ###################################################
 
-    subroutine detente_h_u(x, t, h, u)
+    subroutine detente_h_u(x, t, h, u, params)
 
-        real(pr), intent(in)  :: x, t
-        real(pr), intent(out) :: h, u
+        real(pr), intent(in)         :: x, t
+        character(len=30),intent(in) :: params
+        real(pr), intent(out)        :: h, u
 
         ! -- Variables locales
         real(pr) :: ksi, h_init_am, h_init_av
 
-        call hauteur(h_init_am, h_init_av)
+        call hauteur(h_init_am, h_init_av, params)
 
         ksi = x/t
         h = 1./(9*g)*(2*sqrt(g*h_init_am)-ksi)**2
@@ -120,11 +123,13 @@ contains
 
     ! ####################################################
 
-    subroutine hauteur(h_init_am, h_init_av)
+    subroutine hauteur(h_init_am, h_init_av, params)
 
-        real(pr), intent(out) :: h_init_am, h_init_av
+        character(len=30),intent(in) :: params
+        real(pr), intent(out)        :: h_init_am, h_init_av
+        
 
-        open(unit = 2, file = "params.dat", action = "read")
+        open(unit = 2, file = params, action = "read")
 
         read(2,*)
         read(2,*)

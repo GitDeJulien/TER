@@ -238,13 +238,13 @@ contains
 
         !-----Variables de sortie-----!
         character(len=30)            :: name_file_out
-        character(len=10)            :: xch
+        !character(len=10)            :: xch
         character(len=3)             :: ich
 
         !-----Variables locales-----!
         integer,dimension(:),allocatable  :: Pos_maillage
         real,dimension(:),allocatable     :: H
-        real(pr)                          :: x, a, xim1, t
+        real(pr)                          :: a, xim1, t!, x
         integer                           :: k, km1, Nmax, j, l, iostatus, i
 
         allocate(Pos_maillage(0:nb_capteurs-1),H(0:nb_capteurs-1))
