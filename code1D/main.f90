@@ -124,7 +124,7 @@ program main
         call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u, params)
 
         ! -- Solution approchée
-        call sol_approx_tn(flux, dt, cfl, dx, tn)
+        call sol_approx_tn(flux, dt, cfl, dx, tn, iter)
 
         ! -- Mise à jour des flux
         h_i = flux%hnp1
@@ -151,7 +151,7 @@ program main
     ! -- Calcul de la vitesse de l'onde de choc
     print*, "----------------------------------"
     call f_sigma_vp(flux, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile, params)
-    print*, "La vitesse de l'onde de choc est de  ", sigma, "Unitée à déterminé"
+    print*, "La vitesse de l'onde de choc est de  ", sigma, "m/s"
     
     
     ! -- Calcul de l'erreur
@@ -180,12 +180,14 @@ program main
     if (flux%choix_approx_flux == 1 .AND. cpt < 2) then
         imax = imax *2
         goto 10
+
     end if
+    ! print*, "#############################################"
+    ! print*, "Schéma d'ordre = ", log(Vect_err(1)/Vect_err(2))/log(2.)
+    ! print*, "#############################################"
 
     !call OUT(Vect_imax, Vect_err)
-    print*, "#############################################"
-    print*, "Schéma d'ordre = ", log(Vect_err(1)/Vect_err(2))/log(2.)
-    print*, "#############################################"
+
 
 
 
@@ -194,7 +196,7 @@ program main
     !! -- de la hauteur d'eau sur un capteur -- !
     print*,"Calcul évolution des capteurs ..."
 
-    call evolution_capteur(name_file,imax,iter,dt,nb_capteurs,Pos_capteurs)
+    !call evolution_capteur(name_file,imax,iter,dt,nb_capteurs,Pos_capteurs)
 
     print*,"Fin."
 

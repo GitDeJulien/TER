@@ -17,20 +17,21 @@ module mod_flux
 contains
 
 
-    subroutine sol_approx_tn(flux, dt, cfl, dx, tn)
+    subroutine sol_approx_tn(flux, dt, cfl, dx, tn, iter)
 
         ! - Externe
         type(flux_type), intent(inout)       :: flux
+        integer, intent(in)                  :: iter
         real(pr), intent(in)                 :: dx, cfl
         real(pr), intent(inout)              :: dt, tn
         
 
         ! - Interne
         integer                                     :: i, imax
-        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ud  ! - Taille imax+1 (1:imax+1)
-        real(pr), dimension(0:size(flux%hnp1)-2, 2) :: Ug      ! - Taille imax+1  (0:imax)
+        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ud         ! - Taille imax+1 (1:imax+1)
+        real(pr), dimension(0:size(flux%hnp1)-2, 2) :: Ug         ! - Taille imax+1  (0:imax)
         real(pr), dimension(1:size(flux%hnp1)-1, 2) :: F          ! - Taille imax
-        real(pr), dimension(0:size(flux%hnp1)-1, 2) :: Un, Unp1        ! - Taille imax+2 (0:imax+1)
+        real(pr), dimension(0:size(flux%hnp1)-1, 2) :: Un, Unp1   ! - Taille imax+2 (0:imax+1)
         real(pr)                                    :: unsurdx
         real(pr), dimension(1:size(flux%hnp1)-1)    :: b_i
 
@@ -63,7 +64,7 @@ contains
 
             F = flux_num_2(imax, Ug, Ud, b_i)
 
-            ! -- Euler sur le temps
+            ! -- Schéma volumes finies
             Unp1(1:imax,1) = flux%hnp1(1:imax) - dt*unsurdx*(F(2:imax+1,1) - F(1:imax,1))
             Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
 
@@ -74,7 +75,8 @@ contains
         case(2) ! - Ordre 2 stencile (Ui-1, Ui, Ui+1)
 
             Unp1 = RK2_SSP(Un, Ug, Ud, dt, unsurdx, b_i, imax)
-            call test(flux, imax, unsurdx, dt, b_i, Ug, Ud, Un, Unp1)
+
+            call test(flux, imax, unsurdx, dt, b_i, Ug, Ud, Un, Unp1, iter)
 
         end select
 
@@ -139,8 +141,8 @@ contains
 
         call discretisation_second_order(imax, Un, Ug, Ud)
         F = flux_num_2(imax, Ug, Ud, bi)
-        !k1(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
         k1(1:imax, :) = -unsurdx*(F(2:imax+1,:) - F(1:imax,:))
+        !revoir les indices
 
         Unstar(1:imax,:) = Un(1:imax,:) + dt*k1(1:imax,:)
         UnStar(0,:) = Un(0,:)
@@ -148,7 +150,6 @@ contains
 
         call discretisation_second_order(imax, UnStar, Ug, Ud)
         F = flux_num_2(imax, Ug, Ud, bi)
-        !k2(1:imax, :) = -dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
         k2(1:imax, :) = -unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
         Unp1(1:imax, :) = Un(1:imax, :) + dt*(1./2*k1(1:imax, :) + 1./2*k2(1:imax, :))
@@ -158,45 +159,58 @@ contains
 
     end function
 
-    subroutine discretisation_second_order(imax, Un, Ug, Ud)
+    ! -- Discrétisation d'ordre 2 avec stencile (Ui-1, Ui, Ui+1)
+    subroutine discretisation_second_order(imax, Un, Ug, Ud) !--Un de taille 0:imax+1 (imax+2)
         
         integer, intent(in)                   :: imax
         real(pr), dimension(0:imax+1,2), intent(in)  :: Un
         real(pr), dimension(0:imax,2), intent(out)   :: Ug
         real(pr), dimension(1:imax+1,2), intent(out) :: Ud
 
-        !Ug(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
-        Ug(1:imax,:) = 5./6*Un(0:imax-1,:) + 1./3*Un(1:imax,:) - 1./6*Un(2:imax+1,:)
-        !Ud(1:imax,:) = 5./6*Un(2:imax+1,:) + 1./3*Un(1:imax,:) - 1./6*Un(0:imax-1,:)
-        Ud(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
+        ! Ug(0,:) = Un(0,:)
+        ! Ug(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
+        ! Ud(1:imax,:) = 5./6*Un(2:imax+1,:) + 1./3*Un(1:imax,:) - 1./6*Un(0:imax-1,:)
+        ! Ud(imax+1,:) = Un(imax+1,:)
 
-        Ug(0,:) = Un(0,:)
-        Ud(imax+1,:) = Un(imax+1, :)
+        ! Ug(1:imax,:) = 1./2*(Un(0:imax-1,:)+Un(1:imax,:))
+        ! Ud(1:imax,:) = 3./2*Un(1:imax,:) - 1./2*Un(2:imax+1,:)
+
+        ! -- Potentiellement bien
+        Ug(0:imax,:) = 1./2*(Un(1:imax+1,:) + Un(0:imax,:))
+        Ud(1:imax,:) =  3./2*Un(1:imax,:) - 1./2*Un(2:imax+1,:)
+        !Ud(imax+1,:) = 1./2*(Un(imax+1,:) + Un(imax,:))
+        Ud(imax+1,:) = Un(imax+1,:)
+        !revoir les indices
+
+        !Ug(imax-1,:) = Un(imax-1,:)
+        
+        !Ug(imax,:) = Un(imax,:)
+        !Ud(imax,:) = Un(imax,:)
+        !Ud(imax+1,:) = Un(imax+1, :)
 
     end subroutine
 
-    subroutine test(flux, imax, unsurdx, dt, bi, Ug, Ud, Un, Unp1)
+    ! -- Permet de faire une boucle de retour
+    subroutine test(flux, imax, unsurdx, dt, bi, Ug, Ud, Un, Unp1, iter)
 
         type(flux_type)     :: flux
-        integer, intent(in) :: imax
+        integer, intent(in) :: imax, iter
         real(pr), intent(in):: unsurdx, dt
-        real(pr), dimension(:), intent(in)             :: bi
-        real(pr), dimension(0:imax,2), intent(inout)   :: Ug
-        real(pr), dimension(1:imax+1,2), intent(inout) :: Ud
-        real(pr), dimension(0:imax+1,2), intent(inout) :: Un
+        real(pr), dimension(:), intent(in)              :: bi
+        real(pr), dimension(0:imax,2), intent(inout)    :: Ug
+        real(pr), dimension(1:imax+1,2), intent(inout)  :: Ud
+        real(pr), dimension(0:imax+1,2), intent(inout)  :: Un
         real(pr), dimension(0:imax+1, 2), intent(inout) :: Unp1
 
         ! -- Local
         integer :: i
         real(pr), dimension(1:size(flux%hnp1)-1, 2) :: F
         integer :: valid
-        integer :: cpt
 
         valid = 1
-        cpt = 0
 
-        do i=1,imax+1
-            if (Unp1(i, 1)<1) then
+        do i=0,imax+1
+            if (Unp1(i, 1)< 1.) then
 
                 valid = 0
                 
@@ -220,13 +234,13 @@ contains
             Unp1(0,:) = Unp1(1,:)
             Unp1(imax+1,:) = Unp1(imax,:)
 
-        else
-            cpt = cpt + 1
-            print*, "cpt =", cpt
+            print*,iter
 
         end if
 
     end subroutine
+
+! ##########################################################################################
 
     subroutine evolution_capteur(name_file,imax,iter,dt,nb_capteurs,Pos_capteurs)
         
