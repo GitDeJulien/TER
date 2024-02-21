@@ -14,14 +14,14 @@ program main
     real(pr)                            :: tn, dx, tmax, dt, cfl
     real(pr), dimension(:), allocatable :: x_i, h_i, u_i
     real(pr), dimension(:), allocatable :: sol_exa_h, sol_exa_u, Pos_capteurs
-    real(pr)                            :: errorL1, errorL2, errorLi
-    real(pr), dimension(6)              :: Vect_err
+    real(pr)                            :: errorL1, errorL2, errorLi, errorH1
+    real(pr), dimension(2)              :: Vect_err
     real(pr)                            :: sigma, lambda_g, lambda_etoile, h_etoile, u_etoile
 
     character(len=30)                   :: name_file,params,date,num
 
-    integer, dimension(6)              :: Vect_imax
-    integer :: i, iter, Nmax, imax,cpt, nb_capteurs
+    integer, dimension(2)              :: Vect_imax
+    integer :: i, iter, Nmax, imax, cpt, nb_capteurs
 
     ! -- Sécurité
     Nmax = 10**6
@@ -74,8 +74,9 @@ program main
     ! -- Allocation des tableaux de flux de hauteur et de vitesse
     allocate(x_i(0:imax+1))
     allocate(h_i(0:imax+1), u_i(0:imax+1))
-    allocate(flux%f_h(0:imax+1), flux%f_q(0:imax+1))
-    allocate(flux%hnp1(0:imax+1), flux%unp1(0:imax+1))
+    !allocate(flux%f_h(0:imax+1), flux%f_q(0:imax+1))
+    !allocate(flux%hnp1(0:imax+1), flux%unp1(0:imax+1))
+    allocate(flux%Unp1(0:imax+1, 2))
     allocate(sol_exa_h(0:imax+1), sol_exa_u(0:imax+1))
 
 
@@ -86,11 +87,13 @@ program main
     call maillage(imax, tmax, dx, cfl, x_i, params)
     print*,"Maillage calculé."
     ! initialisation maillage + condition initiale
-    call initialisation(imax, x_i, h_i, u_i,cfl,nb_capteurs,Pos_capteurs, params)
+    call initialisation(imax, x_i, h_i, u_i, cfl,nb_capteurs,Pos_capteurs, params)
 
     ! -- Initialisation des flux 
-    flux%hnp1 = h_i
-    flux%unp1 = u_i
+    ! flux%hnp1 = h_i
+    ! flux%unp1 = u_i
+    flux%Unp1(:, 1) = h_i(:)
+    flux%Unp1(:, 2) = u_i(:)*h_i(:) 
 
     ! -- Écriture de la condition initiale
     do i = 0, imax+1
@@ -107,6 +110,7 @@ program main
 
     ! -- Ouverture du fichier d'écriture des résultats
     open(unit = 11, file = "OUT/sol_exact.dat", action = "write")
+    open(unit = 12, file = "OUT/sol_h_u.dat", action = "write")
 
     print*, "Passage n°", cpt+1
     print*, "-----------------------------------------"
@@ -124,11 +128,13 @@ program main
         call sol_exact_tn(flux, tn, x_i, sol_exa_h, sol_exa_u, params)
 
         ! -- Solution approchée
-        call sol_approx_tn(flux, dt, cfl, dx, tn, iter)
+        call sol_approx_tn(flux, dt, cfl, dx, tn, imax, iter)
 
         ! -- Mise à jour des flux
-        h_i = flux%hnp1
-        u_i = flux%unp1
+        ! h_i = flux%hnp1
+        ! u_i = flux%unp1
+        h_i = flux%Unp1(:,1)
+        u_i = flux%Unp1(:,2)/h_i(:)
 
         ! -- Écriture dans les fichiers un fichier .dat
 
@@ -138,6 +144,14 @@ program main
 
         write(10,*)
         write(10,*)
+
+        if (iter == 100) then
+            print*, "dt =", dt
+            print*,"tn =" , tn
+            do i = 0, imax+1
+                write(12,*) x_i(i), h_i(i), u_i(i), sol_exa_h(i), sol_exa_u(i)
+            end do
+        end if
 
         do i = 0, imax+1
             write(11,*) x_i(i), sol_exa_h(i)
@@ -156,35 +170,39 @@ program main
     
     ! -- Calcul de l'erreur
     print*, "----------------------------------"
-    errorL1 = Error_fct(h_i, sol_exa_h, dx, 1)
+    errorL1 = Error_fct(flux%Unp1(:,1), sol_exa_h, dx, 1)
 
-    errorL2 = Error_fct(h_i, sol_exa_h, dx, 2)
+    errorL2 = Error_fct(flux%Unp1(:,1), sol_exa_h, dx, 2)
 
-    errorLi = Error_fct(h_i, sol_exa_h, dx, 3)
+    errorLi = Error_fct(flux%Unp1(:,1), sol_exa_h, dx, 3)
+
+    errorH1 = Error_fct(flux%Unp1(:,1), sol_exa_h, dx, 4)
 
     print*, "----------------------------------"
 
     ! -- Incrément du compteur
     cpt = cpt + 1
-    Vect_err(cpt) = errorL1
+    Vect_err(cpt) = errorL2
     Vect_imax(cpt) = imax
     ! Désalocation des tableaux
     deallocate(x_i, h_i, u_i)
-    deallocate(flux%f_h, flux%f_q, flux%hnp1, flux%unp1)
+    !deallocate(flux%f_h, flux%f_q, flux%hnp1, flux%unp1)
     deallocate(sol_exa_h, sol_exa_u)
+    deallocate(flux%Unp1)
     ! Fermeture des fichiers
     close(10)
     close(11)
+    close(12)
 
     ! ######################## ORDRE #################### !
     if (flux%choix_approx_flux == 1 .AND. cpt < 2) then
         imax = imax *2
         goto 10
-
     end if
-    ! print*, "#############################################"
-    ! print*, "Schéma d'ordre = ", log(Vect_err(1)/Vect_err(2))/log(2.)
-    ! print*, "#############################################"
+
+    print*, "#############################################"
+    print*, "Schéma d'ordre = ", log(Vect_err(1)/Vect_err(2))/log(2.)
+    print*, "#############################################"
 
     !call OUT(Vect_imax, Vect_err)
 

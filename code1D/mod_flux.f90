@@ -9,49 +9,60 @@ module mod_flux
         !choix du type d'approximation de flux
         integer      :: choix_approx_flux
         !les vecteurs d'entrées h et u (hauteur et vitesse init)
-        real(pr), dimension(:), allocatable :: hnp1, unp1 ! //Mieux vaux appeler un veteur Un avec hn et un
-        real(pr), dimension(:), allocatable :: f_h, f_q
+        !real(pr), dimension(:), allocatable :: hnp1!, unp1 ! //Mieux vaux appeler un veteur Un avec hn et un
+        !real(pr), dimension(:), allocatable :: f_h, f_q
+        real(pr), dimension(:,:), allocatable :: Unp1
 
     end type
 
 contains
 
 
-    subroutine sol_approx_tn(flux, dt, cfl, dx, tn, iter)
+    subroutine sol_approx_tn(flux, dt, cfl, dx, tn, imax, iter)
 
         ! - Externe
         type(flux_type), intent(inout)       :: flux
         integer, intent(in)                  :: iter
         real(pr), intent(in)                 :: dx, cfl
         real(pr), intent(inout)              :: dt, tn
+        integer, intent(in)                  :: imax
         
 
         ! - Interne
-        integer                                     :: i, imax
-        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ud         ! - Taille imax+1 (1:imax+1)
-        real(pr), dimension(0:size(flux%hnp1)-2, 2) :: Ug         ! - Taille imax+1  (0:imax)
-        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: F          ! - Taille imax
-        real(pr), dimension(0:size(flux%hnp1)-1, 2) :: Un, Unp1   ! - Taille imax+2 (0:imax+1)
-        real(pr)                                    :: unsurdx
-        real(pr), dimension(1:size(flux%hnp1)-1)    :: b_i
-
+        ! integer                                     :: i, imax
+        ! real(pr), dimension(1:size(flux%hnp1)-1, 2) :: Ud         ! - Taille imax+1 (1:imax+1)
+        ! real(pr), dimension(0:size(flux%hnp1)-2, 2) :: Ug         ! - Taille imax+1  (0:imax)
+        ! real(pr), dimension(1:size(flux%hnp1)-1, 2) :: F          ! - Taille imax
+        ! real(pr), dimension(0:size(flux%hnp1)-1, 2) :: Un!, Unp1   ! - Taille imax+2 (0:imax+1)
+        ! real(pr)                                    :: unsurdx
+        ! real(pr), dimension(1:size(flux%hnp1)-1)    :: b_i
+        integer                          :: i
+        real(pr), dimension(1:imax+1, 2) :: Ud         ! - Taille imax+1 (1:imax+1)
+        real(pr), dimension(0:imax, 2)   :: Ug         ! - Taille imax+1  (0:imax)
+        real(pr), dimension(1:imax+1, 2) :: F          ! - Taille imax
+        real(pr), dimension(0:imax+1, 2) :: Un!, Unp1   ! - Taille imax+2 (0:imax+1)
+        real(pr)                         :: unsurdx
+        real(pr), dimension(1:imax+1)    :: b_i
 
         unsurdx = 1./dx
-        imax = size(flux%hnp1)-2
+        !imax = size(flux%hnp1)-2
 
         ! -- Tableau des bi
+        ! do i=0, imax
+        !     b_i(i+1) = f_bi(flux%hnp1(i), flux%hnp1(i+1), flux%unp1(i), flux%unp1(i+1))
+        ! end do
         do i=0, imax
-            b_i(i+1) = f_bi(flux%hnp1(i), flux%hnp1(i+1), flux%unp1(i), flux%unp1(i+1))
+            b_i(i+1) = f_bi(flux%Unp1(i,1), flux%Unp1(i+1,1), flux%Unp1(i,2)/flux%Unp1(i,1), flux%Unp1(i+1,2)/flux%Unp1(i+1,1))
         end do
 
 
         ! -- Calcule du pas de temps respectant la cfl
-        if (dt > dx/(2*MAXVAL(b_i))) then 
-            dt = cfl * dx/(2 * MAXVAL(b_i))
-        end if
+        dt = cfl * dx/(2 * MAXVAL(b_i))
+        ! dt = dt/2
 
-        Un(0:imax+1,1) = flux%hnp1(0:imax+1)
-        Un(0:imax+1,2) = flux%hnp1(0:imax+1)*flux%unp1(0:imax+1)
+        ! Un(0:imax+1,1) = flux%hnp1(0:imax+1)
+        ! Un(0:imax+1,2) = flux%hnp1(0:imax+1)*flux%unp1(0:imax+1)
+        Un(0:imax+1,:) = flux%Unp1(0:imax+1,:)
 
         select case(flux%choix_approx_flux)
 
@@ -65,24 +76,28 @@ contains
             F = flux_num_2(imax, Ug, Ud, b_i)
 
             ! -- Schéma volumes finies
-            Unp1(1:imax,1) = flux%hnp1(1:imax) - dt*unsurdx*(F(2:imax+1,1) - F(1:imax,1))
-            Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
+            ! Unp1(1:imax,:) = Un(1:imax,:) - dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
+            flux%Unp1(1:imax,:) = Un(1:imax,:) - dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
             ! -- Condition de bord - Neumann
-            Unp1(0,:) = Unp1(1,:)
-            Unp1(imax+1,:) = Unp1(imax,:)
+            ! Unp1(0,:) = Unp1(1,:)
+            ! Unp1(imax+1,:) = Unp1(imax,:)
+            flux%Unp1(0,:) = flux%Unp1(1,:)
+            flux%Unp1(imax+1,:) = flux%Unp1(imax,:)
+
 
         case(2) ! - Ordre 2 stencile (Ui-1, Ui, Ui+1)
 
-            Unp1 = RK2_SSP(Un, Ug, Ud, dt, unsurdx, b_i, imax)
+            ! Unp1 = RK2_SSP(Un, Ug, Ud, dt, unsurdx, b_i, imax)
+            flux%Unp1 = RK2_SSP(Un, Ug, Ud, dt, unsurdx, b_i, imax)
 
-            call test(flux, imax, unsurdx, dt, b_i, Ug, Ud, Un, Unp1, iter)
+            call test(flux, imax, unsurdx, dt, b_i, Ug, Ud, Un, flux%Unp1, iter)
 
         end select
 
 
-        flux%hnp1(0:imax+1) = Unp1(0:imax+1,1)
-        flux%unp1(0:imax+1) = Unp1(0:imax+1,2)/Unp1(0:imax+1,1)
+        ! flux%hnp1(0:imax+1) = Unp1(0:imax+1,1)
+        ! flux%unp1(0:imax+1) = Unp1(0:imax+1,2)/Unp1(0:imax+1,1)
 
         tn = tn + dt
 
@@ -154,6 +169,7 @@ contains
 
         Unp1(1:imax, :) = Un(1:imax, :) + dt*(1./2*k1(1:imax, :) + 1./2*k2(1:imax, :))
 
+        ! -- Condition aux limites
         Unp1(0,:) = Unp1(1,:)
         Unp1(imax+1,:) = Unp1(imax,:)
 
@@ -162,31 +178,16 @@ contains
     ! -- Discrétisation d'ordre 2 avec stencile (Ui-1, Ui, Ui+1)
     subroutine discretisation_second_order(imax, Un, Ug, Ud) !--Un de taille 0:imax+1 (imax+2)
         
-        integer, intent(in)                   :: imax
+        integer, intent(in)                          :: imax
         real(pr), dimension(0:imax+1,2), intent(in)  :: Un
         real(pr), dimension(0:imax,2), intent(out)   :: Ug
         real(pr), dimension(1:imax+1,2), intent(out) :: Ud
-
-        ! Ug(0,:) = Un(0,:)
-        ! Ug(1:imax,:) = 1./3*(Un(0:imax-1,:) + Un(1:imax,:) + Un(2:imax+1,:))
-        ! Ud(1:imax,:) = 5./6*Un(2:imax+1,:) + 1./3*Un(1:imax,:) - 1./6*Un(0:imax-1,:)
-        ! Ud(imax+1,:) = Un(imax+1,:)
-
-        ! Ug(1:imax,:) = 1./2*(Un(0:imax-1,:)+Un(1:imax,:))
-        ! Ud(1:imax,:) = 3./2*Un(1:imax,:) - 1./2*Un(2:imax+1,:)
 
         ! -- Potentiellement bien
         Ug(0:imax,:) = 1./2*(Un(1:imax+1,:) + Un(0:imax,:))
         Ud(1:imax,:) =  3./2*Un(1:imax,:) - 1./2*Un(2:imax+1,:)
         !Ud(imax+1,:) = 1./2*(Un(imax+1,:) + Un(imax,:))
         Ud(imax+1,:) = Un(imax+1,:)
-        !revoir les indices
-
-        !Ug(imax-1,:) = Un(imax-1,:)
-        
-        !Ug(imax,:) = Un(imax,:)
-        !Ud(imax,:) = Un(imax,:)
-        !Ud(imax+1,:) = Un(imax+1, :)
 
     end subroutine
 
@@ -204,7 +205,7 @@ contains
 
         ! -- Local
         integer :: i
-        real(pr), dimension(1:size(flux%hnp1)-1, 2) :: F
+        real(pr), dimension(1:imax+1, 2) :: F
         integer :: valid
 
         valid = 1
@@ -218,8 +219,8 @@ contains
         end do
 
         if (valid == 0) then
-            Un(0:imax+1,1) = flux%hnp1(0:imax+1)
-            Un(0:imax+1,2) = flux%hnp1(0:imax+1)*flux%unp1(0:imax+1)
+
+            Un(0:imax+1,:) = flux%Unp1(0:imax+1,:)
 
             Ug(0:imax,:) = Un(0:imax,:)
             Ud(1:imax+1,:) = Un(1:imax+1,:)
@@ -227,8 +228,9 @@ contains
             F = flux_num_2(imax, Ug, Ud, bi)
 
             ! -- Euler sur le temps
-            Unp1(1:imax,1) = flux%hnp1(1:imax) - dt*unsurdx*(F(2:imax+1,1) - F(1:imax,1))
-            Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
+            ! Unp1(1:imax,1) = flux%hnp1(1:imax) - dt*unsurdx*(F(2:imax+1,1) - F(1:imax,1))
+            ! Unp1(1:imax,2) = flux%hnp1(1:imax)*flux%unp1(1:imax) - dt*unsurdx*(F(2:imax+1,2) - F(1:imax, 2))
+            flux%Unp1(1:imax,:) = Un(1:imax,:) - dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
             ! -- Condition de bord - Neumann
             Unp1(0,:) = Unp1(1,:)

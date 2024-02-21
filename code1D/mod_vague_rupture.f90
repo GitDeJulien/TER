@@ -14,8 +14,8 @@ contains
 
         ! -- Variable externe
         integer, intent(inout)                             :: imax, nb_capteurs
-        real(pr), dimension(0:imax+1) , intent(in)     :: x_i
-        real(pr), dimension(0:imax+1) , intent(inout)  :: h_i, u_i
+        real(pr), dimension(0:imax+1) , intent(in)         :: x_i
+        real(pr), dimension(0:imax+1) , intent(inout)      :: h_i, u_i
         real(pr), dimension(:), allocatable, intent(inout) :: Pos_capteurs
         real(pr), intent(inout)                            :: cfl
         character(len=30),intent(in)                       :: params

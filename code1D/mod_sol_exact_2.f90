@@ -51,7 +51,7 @@ contains
             else
 
                 sol_h(i) = h_init_av
-                sol_u(i) = u_etoile
+                sol_u(i) = 0
 
             end if
 
@@ -74,7 +74,8 @@ contains
         integer  :: imax
         real(pr) :: h_init_am, h_init_av
 
-        imax = size(flux%hnp1)-2
+        !imax = size(flux%hnp1)-2
+        imax = size(flux%Unp1)-2
         eps = 10.**(-5)
 
         call hauteur(h_init_am, h_init_av, params)
