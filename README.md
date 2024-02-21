@@ -9,8 +9,7 @@ TER -- Dame-break Projet 2A à l'ENSEIRB-MATMECA
 - Puis comme Usernam : GitDeJulien
 - Et comme mdp :
 
-Ancien mdp : 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
-Nouveau mdp : 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
+mdp : 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
 
 # Information pour modifier les codes :
 
