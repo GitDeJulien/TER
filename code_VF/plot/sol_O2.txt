@@ -1,0 +1,13 @@
+stat "../body/out/Van_Leer.dat" name "A"
+#set xr [A_min_x:A_max_x]
+set xr [-5:5]
+set yr [0:0.1]
+set term wxt
+set title 'Solution' font "Times-Roman, 17"
+set xlabel 'x' font "Courier, 16"
+set ylabel 'h(t,x)' font "Courier, 16"
+set key font "Helvetica, 17"
+
+set term gif animate delay 3
+set output "sol_O2.gif"
+do for [i=0:int(A_blocks-3)] {plot "../body/out/Exact.dat" using 1:2 index i w l lc 7 lw 1 title "exact", "../body/out/Van_Leer.dat" using 1:2 index i w lp lc 8 lw 1 title "approx" }
