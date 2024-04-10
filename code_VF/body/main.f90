@@ -30,7 +30,6 @@ program main
 
     print*, "Entrer votre choix d'approximation du flux : "
     print*, " 1) Approximation de Rusanov d'ordre 1"
-    print*, " 2) Approximation de Van Leer d'ordre 2"
     read*, app%choix_approx_flux
 
     ! -- Ouverture du fichier d'écriture des résultats d'approximation
