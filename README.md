@@ -7,9 +7,8 @@ TER -- Dame-break Projet 2A à l'ENSEIRB-MATMECA
 - Se mettre dans le répertoir de l'ordinateur où l'on veut copier le repertoir git;
 - Taper : git clone hhtps://github.com/GitDeJulien/TER.git
 - Puis comme Usernam : GitDeJulien
-- Et comme mdp :
 
-mdp : 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
+mdp : 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
 
 # Information pour modifier les codes :
 
