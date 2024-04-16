@@ -60,7 +60,8 @@ contains
             app%Unp1(1:imax,:) = Un(1:imax,:) - dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
             ! -- Condition de bord - Neumann
-            app%Unp1(0,:) = app%Unp1(1,:)
+            app%Unp1(0,1) = app%Unp1(1,1)
+            app%Unp1(0,2) = 0.
             app%Unp1(imax+1,:) = app%Unp1(imax,:)
 
         case(2)
@@ -99,7 +100,7 @@ contains
                 app%Unp1(0,:) = app%Unp1(1,:)
                 app%Unp1(imax+1,:) = app%Unp1(imax,:)
 
-                print*, "Ordre 1 :", iter
+                print*, "itération:", iter
 
             else
                 app%Unp1 = Un_temp

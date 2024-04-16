@@ -7,6 +7,7 @@ program main
     use mod_TimeSchemes
     use mod_ApproxSol
     use mod_error
+    use mod_analyse_exp
 
     implicit none
 
@@ -18,11 +19,17 @@ program main
     real(pr), dimension(:,:), allocatable :: ExactSol
     real(pr)                              :: errL2, errL1, errLi
     !real(pr)                            :: sigma, lambda_g, lambda_etoile, h_etoile, u_etoile
-    character(len=30)                     :: params, nameOUT
+    character(len=40)                     :: params, nameOUT, num, date
 
     integer :: i, iter, imax
 
-    params = "entry/parameters.txt"
+    ! params = "entry/parameters.txt"
+    print*, "Entrer la date de l'expérience ? (JJ_MM)"
+    read(*,*) date
+    print*, "Entrer le numéro de l'expérience ? "
+    read(*,*) num
+
+    params = "entry/exp_"//trim(date)//"/param/exp_"//trim(num)//".dat"
 
     open(unit = 10, file = params, action = "read")
         read(10,*) imax
@@ -35,10 +42,10 @@ program main
 
     ! -- Ouverture du fichier d'écriture des résultats d'approximation
     if (app%choix_approx_flux == 1) then
-        nameOUT = "out/RUSANOV.dat"
+        nameOUT = "out/RUSANOV_"//trim(date)//"_exp_"//trim(num)//".dat"
         open(unit = 10, file = nameOUT, action = "write")
     else if (app%choix_approx_flux == 2) then
-        nameOUT = "out/MOOD.dat"
+        nameOUT = "out/MOOD_"//trim(date)//"_exp_"//trim(num)//".dat"
         open(unit = 10, file = nameOUT, action = "write")
     else
         print*,"The choice of approximation you made is not correct, please chose 1 or 2"
@@ -96,7 +103,7 @@ program main
 
     print*, "Time loop completed. ----------------"
     print*, " "
-    print*, "Vitesse de l'onde de choque :", sigma, "m/s"
+    print*, "Vitesse de l'onde de choc :", sigma, "m/s"
 
     print*, "Error computation ..."
     errL1 = Error_fct(app%Unp1(:,1), ExactSol(:,1), dx, 1)
@@ -107,6 +114,14 @@ program main
     close(10)
     close(11)
 
+    ! -- Expérience -- !
+    !!-- Cette partie va permettre de visualiser l'évolution -- !!
+    !! -- de la hauteur d'eau sur un capteur -- !
+    print*,"Calcul évolution des capteurs ..."
+    print*, dt
+    dt=tmax/iter
+    print*, dt
+    call evolution_capteur(params, nameOUT, imax,iter,dt, date, num)
     print*, " "
     print*, "Done. --------------"
 

@@ -8,6 +8,4 @@ module mod_constantes
     real(pr), parameter :: h_debut = 2.
     real(pr), parameter :: h_fin = 1.
 
-
-
 end module

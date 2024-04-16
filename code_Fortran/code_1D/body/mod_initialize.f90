@@ -16,7 +16,7 @@ contains
         real(pr), dimension(0:imax+1), intent(out)      :: x_i
         real(pr), dimension(0:imax+1,2), intent(out)    :: U0
         real(pr), intent(out)                           :: dx
-        character(len=30), intent(in)                   :: params
+        character(len=40), intent(in)                   :: params
 
         ! -- Variable interne
         real(pr)  :: HInitLeft, HInitRight
