@@ -36,66 +36,87 @@ module mod_flux
         if (k/=0) then
 
             Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2) + &
-            U(k,2)*(-ne(e,1)) + U(k,3)*(-ne(e,2))) &
+            U(k,2)*(ne(e,1)) + U(k,3)*(ne(e,2))) &
             - 0.5*be(e)*(U(k,1) - U(i,1)))
 
             Fik(2) =  l*(0.5*((U(i,2)*U(i,2)/U(i,1) + &
             gravity*0.5*U(i,1)*U(i,1))*ne(e,1) + &
             U(i,2)*U(i,3)/U(i,1)*ne(e,2) + &
             (U(k,2)*U(k,2)/U(k,1) + &
-            gravity*0.5*U(k,1)*U(k,1))*(-ne(e,1)) + &
-            U(k,2)*U(k,3)/U(k,1)*(-ne(e,2))) - &
+            gravity*0.5*U(k,1)*U(k,1))*(ne(e,1)) + &
+            U(k,2)*U(k,3)/U(k,1)*(ne(e,2))) - &
             0.5*be(e)*(U(k,2) - U(i,2)))
             
             Fik(3) = l*(0.5*((U(i,3)*U(i,3)/U(i,1) + &
             gravity*0.5*U(i,1)*U(i,1))*ne(e,2) + &
             U(i,2)*U(i,3)/U(i,1)*ne(e,1) + &
             (U(k,3)*U(k,3)/U(k,1) + &
-            gravity*0.5*U(k,1)*U(k,1))*(-ne(e,2)) + &
-            U(k,2)*U(k,3)/U(k,1)*(-ne(e,1))) - &
+            gravity*0.5*U(k,1)*U(k,1))*(ne(e,2)) + &
+            U(k,2)*U(k,3)/U(k,1)*(ne(e,1))) - &
             0.5*be(e)*(U(k,3) - U(i,3)))
 
         else if (ClEdge(e) == 1) then !Bord Wall
+
             Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2) + &
-            U(i,2)*(-ne(e,1)) - 2*U(i,3)*(-ne(e,2))) &
+            U(i,2)*(ne(e,1)) - 2*U(i,3)*(ne(e,2))) &
             - 0.5*be(e)*(U(i,1) - U(i,1)))
 
             Fik(2) =  l*(0.5*((U(i,2)*U(i,2)/U(i,1) + &
             gravity*0.5*U(i,1)*U(i,1))*ne(e,1) + &
             U(i,2)*U(i,3)/U(i,1)*ne(e,2) + &
             (U(i,2)*U(i,2)/U(i,1) + &
-            gravity*0.5*U(i,1)*U(i,1))*(-ne(e,1)) + &
-            U(i,2)*(-2)*U(i,3)/U(i,1)*(-ne(e,2))) - &
+            gravity*0.5*U(i,1)*U(i,1))*(ne(e,1)) + &
+            U(i,2)*(-2)*U(i,3)/U(i,1)*(ne(e,2))) - &
             0.5*be(e)*(U(i,2) - U(i,2)))
             
             Fik(3) = l*(0.5*((U(i,3)*U(i,3)/U(i,1) + &
             gravity*0.5*U(i,1)*U(i,1))*ne(e,2) + &
             U(i,2)*U(i,3)/U(i,1)*ne(e,1) + &
             (4*U(i,3)*U(i,3)/U(i,1) + &
-            gravity*0.5*U(i,1)*U(i,1))*(-ne(e,2)) + &
-            U(i,2)*(-2)*U(i,3)/U(i,1)*(-ne(e,1))) - &
+            gravity*0.5*U(i,1)*U(i,1))*(ne(e,2)) + &
+            U(i,2)*(-2)*U(i,3)/U(i,1)*(ne(e,1))) - &
             0.5*be(e)*((-2)*U(i,3) - U(i,3)))
 
-        else if (ClEdge(e) == 2) then !Bord sortie
+
+        else if (ClEdge(e) == 2) then !Bord sortie (Neumann homogene)
+
             Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2) + &
-            U(i,2)*(-ne(e,1)) + U(i,3)*(-ne(e,2))) &
-            - 0.5*be(e)*(U(i,1) - U(i,1)))
+            U(i,2)*(ne(e,1)) + U(i,3)*(ne(e,2))))
 
             Fik(2) =  l*(0.5*((U(i,2)*U(i,2)/U(i,1) + &
             gravity*0.5*U(i,1)*U(i,1))*ne(e,1) + &
             U(i,2)*U(i,3)/U(i,1)*ne(e,2) + &
             (U(i,2)*U(i,2)/U(i,1) + &
-            gravity*0.5*U(i,1)*U(i,1))*(-ne(e,1)) + &
-            U(i,2)*U(i,3)/U(i,1)*(-ne(e,2))) - &
-            0.5*be(e)*(U(i,2) - U(i,2)))
+            gravity*0.5*U(i,1)*U(i,1))*(ne(e,1)) + &
+            U(i,2)*U(i,3)/U(i,1)*(ne(e,2))))
             
             Fik(3) = l*(0.5*((U(i,3)*U(i,3)/U(i,1) + &
             gravity*0.5*U(i,1)*U(i,1))*ne(e,2) + &
             U(i,2)*U(i,3)/U(i,1)*ne(e,1) + &
             (U(i,3)*U(i,3)/U(i,1) + &
-            gravity*0.5*U(i,1)*U(i,1))*(-ne(e,2)) + &
-            U(i,2)*U(i,3)/U(i,1)*(-ne(e,1))) - &
-            0.5*be(e)*(U(i,3) - U(i,3)))
+            gravity*0.5*U(i,1)*U(i,1))*(ne(e,2)) + &
+            U(i,2)*U(i,3)/U(i,1)*(ne(e,1))))
+
+
+        else if (ClEdge(e) == 3) then !Bord entrer
+
+            Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2) + &
+            U(i,2)*(ne(e,1)) + U(i,3)*(ne(e,2))))
+
+            Fik(2) =  l*(0.5*((U(i,2)*U(i,2)/U(i,1) + &
+            gravity*0.5*U(i,1)*U(i,1))*ne(e,1) + &
+            U(i,2)*U(i,3)/U(i,1)*ne(e,2) + &
+            gravity*0.5*U(i,1)*U(i,1)*(ne(e,1))) + &
+            0.5*be(e)*U(i,2))
+            
+            Fik(3) = l*(0.5*((U(i,3)*U(i,3)/U(i,1) + &
+            gravity*0.5*U(i,1)*U(i,1))*ne(e,2) + &
+            U(i,2)*U(i,3)/U(i,1)*ne(e,1) + &
+            gravity*0.5*U(i,1)*U(i,1)*(ne(e,2))) + &
+            0.5*be(e)*U(i,3))
+
+
+
         end if
         
     end subroutine
@@ -121,7 +142,7 @@ module mod_flux
         do i=1,NumberOfCells
 
             if (CellCenterCoord(i,1) < 0.) then
-                U(i,1) = 0.08
+                U(i,1) = 2
                 U(i,2) = 0.
                 U(i,3) = 0.
             else
@@ -187,7 +208,7 @@ module mod_flux
             if (k/=0) then
                 b(e) = max(abs(U(i,2)/U(i,1)*ne(e,1) + U(i,3)/U(i,1)*ne(e,2) + sqrt(gravity*U(i,1))), &
                 abs(U(i,2)/U(i,1)*ne(e,1) + U(i,3)/U(i,1)*ne(e,2) - sqrt(gravity*U(i,1))), &
-                abs(U(k,2)/U(k,1)*(-ne(e,1)) + U(k,3)/U(i,1)*(-ne(e,2)) - sqrt(gravity*U(k,1))), &
+                abs(U(k,2)/U(k,1)*(-ne(e,1)) + U(k,3)/U(k,1)*(-ne(e,2)) + sqrt(gravity*U(k,1))), &
                 abs(U(k,2)/U(k,1)*(-ne(e,1)) + U(k,3)/U(k,1)*(-ne(e,2)) - sqrt(gravity*U(k,1))))
             else
                 b(e) = max(abs(U(i,2)/U(i,1)*ne(e,1) + U(i,3)/U(i,1)*ne(e,2) + sqrt(gravity*U(i,1))), &

@@ -323,7 +323,7 @@ contains
 
         ! -- Local
         integer :: i, n1, n2, A, B
-        real(pr) :: x1, x2, y1, y2
+        real(pr) :: x1, x2, y1, y2, norm
         real(pr), dimension(2) :: XiXk, XiXm
         real(pr), dimension(2) :: Xi, Xk, Xm
 
@@ -365,9 +365,11 @@ contains
                 end if
 
             end if
+            norm = sqrt((NormalVectCoord(i,1)**2+NormalVectCoord(i,2)**2))
+            ! print*, "norm", norm
+
+            NormalVectCoord(i,:) =  NormalVectCoord(i,:)/norm
         end do
-
-
 
     end subroutine
 

@@ -60,8 +60,11 @@ contains
             app%Unp1(1:imax,:) = Un(1:imax,:) - dt*unsurdx*(F(2:imax+1,:) - F(1:imax,:))
 
             ! -- Condition de bord - Neumann
-            app%Unp1(0,:) = app%Unp1(1,:)
+            ! app%Unp1(0,:) = app%Unp1(1,:)
+            ! app%Unp1(imax+1,:) = app%Unp1(imax,:)
+            app%Unp1(0,1) = app%Unp1(1,1)
             app%Unp1(imax+1,:) = app%Unp1(imax,:)
+            app%Unp1(0,2) = 0.
 
         case(2)
 

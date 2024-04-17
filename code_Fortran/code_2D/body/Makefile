@@ -15,3 +15,4 @@ clean :
 
 clear :
 	@rm -f out/*.vtk
+	@rm -f out/*.dat

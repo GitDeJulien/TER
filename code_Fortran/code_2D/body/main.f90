@@ -10,6 +10,8 @@ program main
 
     ! -- Mesh informations
     character(len=30)                      :: MeshFile
+    !character(len=30)                      :: chiter
+    character(len=40)                      :: ct
     integer                                :: NumberOfCells, NumberOfEdges
     integer, dimension(:), allocatable     :: ClEdge
     integer, dimension(:,:), allocatable   :: CellVertices, EdgeNeighbor, EdgeOfCell
@@ -17,7 +19,7 @@ program main
     real(pr), dimension(:,:), allocatable  :: NodeCoord, CellCenterCoord, NormalVectCoord
 
     ! -- Flux tools 
-    integer                               :: e, i, k, iter, nplot, nmax
+    integer                               :: e, i, k, iter, nplot, nmax, cpt
     real(pr), dimension(:), allocatable   :: be, Fik
     real(pr), dimension(:,:), allocatable :: Un, Unp1
 
@@ -33,11 +35,12 @@ program main
     allocate(Unp1(1:NumberOfCells,3))
 
     ! -- Time Loop
-    tmax = 30. !seconde
+    tmax = 10. !seconde
     dt = 0.
     t = 0.
     cfl = 0.8
     iter = 0
+    cpt = 0
 
     do while (t < tmax)
 
@@ -47,6 +50,7 @@ program main
         end if
 
         Unp1 = Un
+        print*, "t=",t
 
         ! -- be computing
         be = beComputing(NumberOfEdges, EdgeNeighbor, Un, NormalVectCoord)
@@ -55,7 +59,7 @@ program main
         ! -- dt computing
         dt = dtComputng(cfl, be, CellArea, CellPerimeter)
         nmax = int(tmax/dt)
-        nplot = int(nmax/50.)
+        nplot = int(nmax/200.)
         !print*, "nplot=",nplot
         
         do e = 1,NumberOfEdges
@@ -74,15 +78,28 @@ program main
 
         end do !end edge loop
 
+        ! if (mod(iter,nplot) == 0) then ! ecriture des résultat format vtk
+        !     call out(iter, Un, NodeCoord, CellVertices, 1)
+        ! end if
+        ! ----------------------------------------
+        !! Ecriture des résultats dans un .dat
+        if (mod(iter,nplot) == 0) then 
+            write(ct,'(I4)') cpt
+            open(unit=20, file='out/sol.'//trim(adjustl(ct))//'.dat')
+                do i=1,size(Un,1)
+                    write(20,*) CellCenterCoord(i,1), CellCenterCoord(i,2), Un(i,1), Un(i,2)/Un(i,1), Un(i,3)/Un(i,1)
+                end do
+            close(20)
+            cpt = cpt + 1
+        end if
+        !----------------------------------------
+
         Un = Unp1
         t = t + dt
         iter = iter + 1
 
-        if (mod(iter,nplot) == 0) then
-            call out(iter, Un, NodeCoord, CellVertices, 1)
-        end if
-
     end do !end time loop
+    print*,"dt=", dt
 
     deallocate(NodeCoord, CellVertices, &
     ClEdge, EdgeLength, CellCenterCoord, CellArea, CellPerimeter, NormalVectCoord, &

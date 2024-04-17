@@ -44,11 +44,12 @@ Curve Loop(1) = {4, 1, -5, 7};
 Curve Loop(2) = {5, 2, -3, 6};
 
 //Condition de bord
-Physical Curve(1) = {1, 2, 6, 7};
-Physical Curve(2) = {3, 4};
+Physical Curve(1) = {1, 2, 6, 7}; //Mur
+Physical Curve(2) = {3}; //Entrer
+Physical Curve(3) = {4}; //Sortie
 
 //Condition de surface
-Physical Surface(10) = {1, 2};
+Physical Surface(10) = {1, 2, 3};
 
 
 // Bord de l'obstacle
