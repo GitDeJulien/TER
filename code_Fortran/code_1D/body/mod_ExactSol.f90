@@ -12,7 +12,7 @@ contains
     subroutine ExactSolFct(app, tn, x_i, sol_h, sol_u, sigma, params)
 
         type(approx_type), intent(in)       :: app
-        character(len=30),intent(in)        :: params
+        character(len=40),intent(in)        :: params
         real(pr), intent(in)                :: tn
         real(pr), dimension(:), intent(in)  :: x_i
         real(pr), dimension(:), intent(out) :: sol_h, sol_u
@@ -63,7 +63,7 @@ contains
     subroutine f_sigma_vp(app, sigma, lambda_g, lambda_etoile, h_etoile, u_etoile, params)
 
         type(approx_type), intent(in)  :: app
-        character(len=30),intent(in) :: params
+        character(len=40),intent(in) :: params
         real(pr), intent(out)        :: sigma
         real(pr), intent(out)        :: lambda_g, lambda_etoile
         real(pr), intent (out)       :: h_etoile, u_etoile
@@ -107,7 +107,7 @@ contains
     subroutine detente_h_u(x, t, h, u, params)
 
         real(pr), intent(in)         :: x, t
-        character(len=30),intent(in) :: params
+        character(len=40),intent(in) :: params
         real(pr), intent(out)        :: h, u
 
         ! -- Variables locales
@@ -125,7 +125,7 @@ contains
 
     subroutine hauteur(h_init_am, h_init_av, params)
 
-        character(len=30),intent(in) :: params
+        character(len=40),intent(in) :: params
         real(pr), intent(out)        :: h_init_am, h_init_av
         
 

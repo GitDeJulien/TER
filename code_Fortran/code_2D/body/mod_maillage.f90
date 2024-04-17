@@ -366,8 +366,6 @@ contains
 
             end if
             norm = sqrt((NormalVectCoord(i,1)**2+NormalVectCoord(i,2)**2))
-            ! print*, "norm", norm
-
             NormalVectCoord(i,:) =  NormalVectCoord(i,:)/norm
         end do
 
