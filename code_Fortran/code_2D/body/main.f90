@@ -18,7 +18,7 @@ program main
     real(pr), dimension(:), allocatable    :: CellArea, CellPerimeter, EdgeLength
     real(pr), dimension(:,:), allocatable  :: NodeCoord, CellCenterCoord, NormalVectCoord
 
-    ! -- Flux tools 
+    ! -- Flux tools
     integer                               :: e, i, k, iter, nplot, nmax, cpt
     real(pr), dimension(:), allocatable   :: be, Fik
     real(pr), dimension(:,:), allocatable :: Un, Unp1
@@ -61,7 +61,7 @@ program main
         nmax = int(tmax/dt)
         nplot = int(nmax/200.)
         !print*, "nplot=",nplot
-        
+
         do e = 1,NumberOfEdges
 
             ! -- Flux computing
@@ -69,7 +69,7 @@ program main
 
             i = EdgeNeighbor(e, 1)
             k = EdgeNeighbor(e, 2)
-            
+
             if (k/=0) then
                 Unp1(k,:) = Unp1(k,:) + dt/CellArea(k) * Fik(:)
             end if
@@ -78,12 +78,12 @@ program main
 
         end do !end edge loop
 
-        ! if (mod(iter,nplot) == 0) then ! ecriture des résultat format vtk
-        !     call out(iter, Un, NodeCoord, CellVertices, 1)
-        ! end if
+        if (mod(iter,nplot) == 0) then ! ecriture des résultat format vtk
+            call out(iter, Un, NodeCoord, CellVertices, 1)
+        end if
         ! ----------------------------------------
         !! Ecriture des résultats dans un .dat
-        if (mod(iter,nplot) == 0) then 
+        if (mod(iter,nplot) == 0) then
             write(ct,'(I4)') cpt
             open(unit=20, file='out/sol.'//trim(adjustl(ct))//'.dat')
                 do i=1,size(Un,1)

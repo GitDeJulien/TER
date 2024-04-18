@@ -4,9 +4,9 @@ h = 0.1;
 // Toutes les valeurs sont en mètre
 
 // Longueur du bassin
-L = 5; 
+L = 3;
 //Largeur du bassin
-l = 5e-1;
+l = 3.7e-1;
 
 
 
@@ -65,8 +65,3 @@ Plane Surface(2) = {2};
 
 // Définition bord et surface obtacle
 //Physicla Curve(4) = {8, 9, 10, 11};
-
-
-
-
-
