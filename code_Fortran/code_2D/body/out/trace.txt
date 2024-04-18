@@ -12,13 +12,13 @@ set palette defined ( 0 '#9b5fe0',\
 set yr [-0.5:0.5]
 
 # forcer l'étendue de la colorbar. A changer selon les cas.
-set cbrange [0.01:0.09]
+set cbrange [0.0:0.09]
 
 # force la mise à l'échelle des axes.
 set size ratio -1
 
 # si affichage 3D, force l'étendue de l'axe des z. A changer selon les cas.
-set zrange [0.01:0.09]
+set zrange [0.0:0.09]
 
 # si affichage 3D, fixe le point de vue. A changer selon les cas.
 #set view 48,132
@@ -26,7 +26,7 @@ set view 80,170
 
 #pour faire un gif
 set term gif animate delay 4
-set output "sol_h.gif"
+set output "sol_test.gif"
 
 do for [i = 1:218] {
     t=i*0.00878
@@ -42,6 +42,6 @@ do for [i = 1:218] {
     ## A décommenter si affichage classique, et à adapter pour gérer la vitesse d'affichage
     #pause 0.01
     ## Pour le gif
-    splot "./sol.".i.".dat" u 1:2:3 palette
+    splot "./sol.".i.".dat" u 1:2:3 palette title "Rusanov", "./sol.".i.".dat" u 1:2:6 lc 8 title "Topologie"
     
 }

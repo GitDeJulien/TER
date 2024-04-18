@@ -12,7 +12,7 @@ program main
     character(len=30)                      :: MeshFile
     !character(len=30)                      :: chiter
     character(len=40)                      :: ct
-    integer                                :: NumberOfCells, NumberOfEdges
+    integer                                :: NumberOfCells, NumberOfEdges, shape
     integer, dimension(:), allocatable     :: ClEdge
     integer, dimension(:,:), allocatable   :: CellVertices, EdgeNeighbor, EdgeOfCell
     real(pr), dimension(:), allocatable    :: CellArea, CellPerimeter, EdgeLength
@@ -20,7 +20,7 @@ program main
 
     ! -- Flux tools
     integer                               :: e, i, k, iter, nplot, nmax, cpt
-    real(pr), dimension(:), allocatable   :: be, Fik
+    real(pr), dimension(:), allocatable   :: be, Fik, topo
     real(pr), dimension(:,:), allocatable :: Un, Unp1
 
     ! -- TimeLoop tools
@@ -41,13 +41,12 @@ program main
     cfl = 0.8
     iter = 0
     cpt = 0
+    shape = 1
+
+    Un = InitU(NumberOfCells, CellCenterCoord)
+    !topo = topology(NumberOfCells, CellCenterCoord, shape)
 
     do while (t < tmax)
-
-        if (t < 10e-5) then
-            ! -- U initialization
-            Un = InitU(NumberOfCells, CellCenterCoord)
-        end if
 
         Unp1 = Un
         print*, "t=",t
@@ -88,7 +87,8 @@ program main
             write(ct,'(I4)') cpt
             open(unit=20, file='out/sol.'//trim(adjustl(ct))//'.dat')
                 do i=1,size(Un,1)
-                    write(20,*) CellCenterCoord(i,1), CellCenterCoord(i,2), Un(i,1), Un(i,2)/Un(i,1), Un(i,3)/Un(i,1)
+                    write(20,*) CellCenterCoord(i,1), CellCenterCoord(i,2), Un(i,1), Un(i,2)/Un(i,1), Un(i,3)/Un(i,1),&
+                    topo(i)
                 end do
             close(20)
             cpt = cpt + 1
@@ -105,7 +105,7 @@ program main
     deallocate(NodeCoord, CellVertices, &
     ClEdge, EdgeLength, CellCenterCoord, CellArea, CellPerimeter, NormalVectCoord, &
     EdgeNeighbor, EdgeOfCell)
-    deallocate(be, Un, Fik, Unp1)
+    deallocate(be, Un, Fik, Unp1, topo)
 
 
 end program

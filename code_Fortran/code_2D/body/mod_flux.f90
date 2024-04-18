@@ -55,27 +55,9 @@ module mod_flux
             U(k,2)*U(k,3)/U(k,1)*(ne(e,1))) - &
             0.5*be(e)*(U(k,3) - U(i,3)))
 
+
+
         else if (ClEdge(e) == 1) then !Bord Wall (Mure avec rebond)
-
-            ! Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2) + &
-            ! U(i,2)*(ne(e,1)) - 2*U(i,3)*(ne(e,2))) &
-            ! - 0.5*be(e)*(U(i,1) - U(i,1)))
-
-            ! Fik(2) =  l*(0.5*((U(i,2)*U(i,2)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*ne(e,1) + &
-            ! U(i,2)*U(i,3)/U(i,1)*ne(e,2) + &
-            ! (U(i,2)*U(i,2)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*(ne(e,1)) + &
-            ! U(i,2)*(-2)*U(i,3)/U(i,1)*(ne(e,2))) - &
-            ! 0.5*be(e)*(U(i,2) - U(i,2)))
-
-            ! Fik(3) = l*(0.5*((U(i,3)*U(i,3)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*ne(e,2) + &
-            ! U(i,2)*U(i,3)/U(i,1)*ne(e,1) + &
-            ! (4*U(i,3)*U(i,3)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*(ne(e,2)) + &
-            ! U(i,2)*(-2)*U(i,3)/U(i,1)*(ne(e,1))) - &
-            ! 0.5*be(e)*((-2)*U(i,3) - U(i,3)))
 
             Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2)))
 
@@ -93,38 +75,6 @@ module mod_flux
 
 
         else if (ClEdge(e) == 2) then !Bord sortie (Neumann homogene)
-
-            ! Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2) + &
-            ! U(i,2)*(ne(e,1)) + U(i,3)*(ne(e,2))))
-
-            ! Fik(2) =  l*(0.5*((U(i,2)*U(i,2)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*ne(e,1) + &
-            ! U(i,2)*U(i,3)/U(i,1)*ne(e,2) + &
-            ! (U(i,2)*U(i,2)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*(ne(e,1)) + &
-            ! U(i,2)*U(i,3)/U(i,1)*(ne(e,2))))
-
-            ! Fik(3) = l*(0.5*((U(i,3)*U(i,3)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*ne(e,2) + &
-            ! U(i,2)*U(i,3)/U(i,1)*ne(e,1) + &
-            ! (U(i,3)*U(i,3)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*(ne(e,2)) + &
-            ! U(i,2)*U(i,3)/U(i,1)*(ne(e,1))))
-
-
-            ! Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2)))
-
-            ! Fik(2) =  l*(0.5*((U(i,2)*U(i,2)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*ne(e,1) + &
-            ! U(i,2)*U(i,3)/U(i,1)*ne(e,2) + &
-            ! (gravity*0.5*U(i,1)*U(i,1))*(ne(e,1))) - &
-            ! 0.5*be(e)*(- U(i,2)))
-            !
-            ! Fik(3) = l*(0.5*((U(i,3)*U(i,3)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*ne(e,2) + &
-            ! U(i,2)*U(i,3)/U(i,1)*ne(e,1) + &
-            ! (gravity*0.5*U(i,1)*U(i,1))*(ne(e,2))) - &
-            ! 0.5*be(e)*(- U(i,3)))
 
             Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2) + &
             U(i,2)*(ne(e,1)) + U(i,3)*(ne(e,2))) &
@@ -148,21 +98,6 @@ module mod_flux
 
 
         else if (ClEdge(e) == 3) then !Bord entrée (Mur réflexif)
-
-            ! Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2)))
-
-            ! Fik(2) =  l*(0.5*((U(i,2)*U(i,2)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*ne(e,1) + &
-            ! U(i,2)*U(i,3)/U(i,1)*ne(e,2) + &
-            ! (gravity*0.5*U(i,1)*U(i,1))*(ne(e,1))) + &
-            ! 0.5*be(e)*(U(i,2)))
-
-            ! Fik(3) = l*(0.5*((U(i,3)*U(i,3)/U(i,1) + &
-            ! gravity*0.5*U(i,1)*U(i,1))*ne(e,2) + &
-            ! U(i,2)*U(i,3)/U(i,1)*ne(e,1) + &
-            ! (gravity*0.5*U(i,1)*U(i,1))*(ne(e,2))) + &
-            ! 0.5*be(e)*(U(i,3)))
-
 
             Fik(1) = l*(0.5*(U(i,2)*ne(e,1) + U(i,3)*ne(e,2)))
 
@@ -281,5 +216,31 @@ module mod_flux
 
     ! #####################################################################
 
+    function topology(NumberOfCells, CellCenterCoord, shape)result(t)
+
+        ! -- In
+        integer, intent(in) :: NumberOfCells
+        integer, intent(in) :: shape
+        real(pr), dimension(:,:), intent(in) :: CellCenterCoord
+
+        ! -- Out
+        real(pr), dimension(:), allocatable :: t
+
+        ! -- Local
+        integer :: i
+
+        allocate(t(1:NumberOfCells))
+        
+        if (shape == 1) then !GrandPave
+            do i=1,NumberOfCells
+                if (CellCenterCoord(i,1) > 0.94 .AND. CellCenterCoord(i,1) < 1.06) then
+                    t(i) = 0.02
+                else
+                    t(i) = 0.0
+                end if
+            end do
+        end if
+
+    end function
 
 end module
