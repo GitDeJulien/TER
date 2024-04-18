@@ -78,9 +78,10 @@ program main
 
         end do !end edge loop
 
-        if (mod(iter,nplot) == 0) then ! ecriture des résultat format vtk
-            call out(iter, Un, NodeCoord, CellVertices, 1)
-        end if
+        !! Ecriture des résultat format vtk
+        ! if (mod(iter,nplot) == 0) then
+        !     call out(iter, Un, NodeCoord, CellVertices, 1)
+        ! end if
         ! ----------------------------------------
         !! Ecriture des résultats dans un .dat
         if (mod(iter,nplot) == 0) then

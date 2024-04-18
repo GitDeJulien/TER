@@ -203,7 +203,7 @@ module mod_flux
         do i=1,NumberOfCells
 
             if (CellCenterCoord(i,1) < 0.) then
-                U(i,1) = 0.04
+                U(i,1) = 0.08
                 U(i,2) = 0.
                 U(i,3) = 0.
             else
